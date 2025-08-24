@@ -42,18 +42,28 @@ class NewsInterface:
         return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
-    def create_news_main_menu() -> InlineKeyboardMarkup:
+    def create_news_main_menu(page: int = 0, total_pages: int = 1) -> InlineKeyboardMarkup:
         """Create news main menu with specific buttons as requested"""
         keyboard = []
         
         # Numbered buttons for latest news (1-5 for first page)
         article_buttons = []
-        for i in range(1, 6):  # 1 to 5 for first page
-            article_buttons.append(InlineKeyboardButton(str(i), callback_data=f'news_details_latest_0_{i}'))
+        start_article = page * 5 + 1  # Calculate starting article number for this page
+        for i in range(5):  # 5 articles per page
+            article_number = start_article + i
+            article_buttons.append(InlineKeyboardButton(str(article_number), callback_data=f'news_details_latest_{page}_{article_number}'))
         keyboard.append(article_buttons)
         
         # Update button
         keyboard.append([InlineKeyboardButton("🔄 Обновить", callback_data='news_category_latest')])
+        
+        # Navigation row (Next button for scrolling through news)
+        nav_row = []
+        if page < total_pages - 1:
+            nav_row.append(InlineKeyboardButton("➡️ Далее", callback_data=f'news_page_latest_{page + 1}'))
+        
+        if nav_row:
+            keyboard.append(nav_row)
         
         # Category buttons (2 per row)
         keyboard.append([

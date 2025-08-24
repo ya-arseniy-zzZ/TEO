@@ -807,7 +807,12 @@ class TeoBot:
             if len(parts) >= 4:
                 category = parts[2]
                 page = int(parts[3])
-                await self._show_news_category(query, category, page)
+                
+                # Special handling for latest news (main menu)
+                if category == 'latest':
+                    await self._show_news_menu_with_page(query, page)
+                else:
+                    await self._show_news_category(query, category, page)
         
         elif query.data.startswith('news_details_'):
             # Format: news_details_category_page_article_index
@@ -1065,7 +1070,14 @@ class TeoBot:
 Выбери действие:"""
         
         keyboard = HabitInterface.create_main_habits_menu()
-        await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+        
+        # Check if the current message has media and handle accordingly
+        if query.message.photo:
+            # If message has photo, edit caption instead of text
+            await query.edit_message_caption(caption=message, reply_markup=keyboard, parse_mode='Markdown')
+        else:
+            # If message is text-only, edit text
+            await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
     
     async def _show_user_habits(self, query, user_id: int, page: int) -> None:
         """Show user's habits with pagination"""
@@ -1094,7 +1106,13 @@ class TeoBot:
             keyboard, has_next = HabitInterface.create_habits_list_keyboard(habits, page)
             reply_markup = keyboard
         
-        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        # Check if the current message has media and handle accordingly
+        if query.message.photo:
+            # If message has photo, edit caption instead of text
+            await query.edit_message_caption(caption=message, reply_markup=reply_markup, parse_mode='Markdown')
+        else:
+            # If message is text-only, edit text
+            await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
     
     async def _show_habit_details(self, query, user_id: int, habit_id: str) -> None:
         """Show detailed view of a habit"""
@@ -1112,7 +1130,13 @@ class TeoBot:
         message = HabitInterface.format_habit_details(habit)
         keyboard = HabitInterface.create_habit_details_keyboard(habit)
         
-        await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+        # Check if the current message has media and handle accordingly
+        if query.message.photo:
+            # If message has photo, edit caption instead of text
+            await query.edit_message_caption(caption=message, reply_markup=keyboard, parse_mode='Markdown')
+        else:
+            # If message is text-only, edit text
+            await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
     
     async def _complete_habit(self, query, user_id: int, habit_id: str) -> None:
         """Mark habit as completed"""
@@ -1140,7 +1164,13 @@ class TeoBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        # Check if the current message has media and handle accordingly
+        if query.message.photo:
+            # If message has photo, edit caption instead of text
+            await query.edit_message_caption(caption=message, reply_markup=reply_markup, parse_mode='Markdown')
+        else:
+            # If message is text-only, edit text
+            await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
     
     async def _show_habit_stats(self, query, user_id: int) -> None:
         """Show habit statistics"""
@@ -1152,7 +1182,13 @@ class TeoBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        # Check if the current message has media and handle accordingly
+        if query.message.photo:
+            # If message has photo, edit caption instead of text
+            await query.edit_message_caption(caption=message, reply_markup=reply_markup, parse_mode='Markdown')
+        else:
+            # If message is text-only, edit text
+            await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
     
     # Additional habit methods (calling external module to keep file manageable)
     async def _show_habit_creation(self, query, user_id: int) -> None:
@@ -1790,7 +1826,7 @@ class TeoBot:
             message = """❌ Извини, не удалось получить новости. Попробуй позже.
 
 Выбери категорию новостей:"""
-            keyboard = NewsInterface.create_news_main_menu()
+            keyboard = NewsInterface.create_news_main_menu(page=0, total_pages=1)
             
             # Send with news avatar image
             try:
@@ -1818,7 +1854,75 @@ class TeoBot:
         
         message = f"""{news_section}"""
         
-        keyboard = NewsInterface.create_news_main_menu()
+        # Calculate total pages for latest news
+        total_pages = NewsInterface.get_page_count(len(latest_news['articles'])) if latest_news.get('articles') else 1
+        
+        keyboard = NewsInterface.create_news_main_menu(page=0, total_pages=total_pages)
+        
+        # Send with news avatar image
+        try:
+            with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+                await query.edit_message_media(
+                    media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
+                    reply_markup=keyboard
+                )
+        except Exception as e:
+            logger.error(f"Error sending news menu with image: {e}")
+            # Fallback to text-only
+            await query.edit_message_text(message, reply_markup=keyboard, parse_mode='HTML')
+    
+    async def _show_news_menu_with_page(self, query, page: int = 0) -> None:
+        """Show news menu with specific page for latest news"""
+        # Get user timezone from database
+        user_id = query.from_user.id
+        weather_settings = db.get_weather_settings(user_id)
+        user_timezone = weather_settings.get('timezone', 'UTC') if weather_settings else 'UTC'
+        
+        # Get latest news data with user timezone
+        latest_news = news_service.get_news("latest", user_timezone)
+        
+        if not latest_news:
+            message = """❌ Извини, не удалось получить новости. Попробуй позже.
+
+Выбери категорию новостей:"""
+            keyboard = NewsInterface.create_news_main_menu(page=page, total_pages=1)
+            
+            # Send with news avatar image
+            try:
+                with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+                    await query.edit_message_media(
+                        media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
+                        reply_markup=keyboard
+                    )
+            except Exception as e:
+                logger.error(f"Error sending news menu with image: {e}")
+                # Fallback to text-only
+                await query.edit_message_text(message, reply_markup=keyboard, parse_mode='HTML')
+            return
+        
+        # Format latest news section for specific page
+        news_section = ""
+        if latest_news.get('articles'):
+            # Calculate articles for current page
+            articles_per_page = 5
+            start_idx = page * articles_per_page
+            end_idx = start_idx + articles_per_page
+            page_articles = latest_news['articles'][start_idx:end_idx]
+            
+            news_section = "⚡ <b>Последние новости</b>⚡\n\n"
+            for i, article in enumerate(page_articles, start=start_idx + 1):
+                title = article.get('title', '')
+                time = article.get('time', '')
+                if title:
+                    news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n\n"
+            news_section += "💡 <i>Ты можешь ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или выбрать интересующую категорию.</i>"
+        
+        message = f"""{news_section}"""
+        
+        # Calculate total pages for latest news
+        total_pages = NewsInterface.get_page_count(len(latest_news['articles'])) if latest_news.get('articles') else 1
+        
+        keyboard = NewsInterface.create_news_main_menu(page=page, total_pages=total_pages)
         
         # Send with news avatar image
         try:
@@ -2088,53 +2192,7 @@ class TeoBot:
             else:
                 await query.edit_message_text(fallback_message, reply_markup=reply_markup, parse_mode='HTML')
     
-    async def _show_habits_menu(self, query) -> None:
-        """Show habits menu"""
-        try:
-            message = """🎯 **Привычки**
 
-Отслеживай свои привычки и достигай целей!
-
-Выбери действие:"""
-            
-            keyboard = [
-                [InlineKeyboardButton("📋 Мои привычки", callback_data='view_habits')],
-                [InlineKeyboardButton("➕ Создать привычку", callback_data='create_habit')],
-                [InlineKeyboardButton("📊 Статистика", callback_data='habit_stats')],
-                [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            # Check if the current message has media and handle accordingly
-            if query.message.photo:
-                # If message has photo, edit caption instead of text
-                await query.edit_message_caption(caption=message, reply_markup=reply_markup, parse_mode='Markdown')
-            else:
-                # If message is text-only, edit text
-                await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
-            
-        except Exception as e:
-            logger.error(f"Error in _show_habits_menu: {e}")
-            # Fallback message
-            fallback_message = """🎯 **Привычки**
-
-❌ Произошла ошибка при загрузке меню привычек.
-
-Выбери действие:"""
-            
-            keyboard = [
-                [InlineKeyboardButton("🔄 Попробовать снова", callback_data='habits_menu')],
-                [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            # Check if the current message has media and handle accordingly
-            if query.message.photo:
-                # If message has photo, edit caption instead of text
-                await query.edit_message_caption(caption=fallback_message, reply_markup=reply_markup, parse_mode='Markdown')
-            else:
-                # If message is text-only, edit text
-                await query.edit_message_text(fallback_message, reply_markup=reply_markup, parse_mode='Markdown')
     
     async def _show_main_menu(self, query) -> None:
         """Show main menu with bot avatar"""

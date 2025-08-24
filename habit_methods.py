@@ -279,7 +279,13 @@ async def show_habit_management(query, user_id: int, page: int, db):
         keyboard, has_next = HabitInterface.create_management_keyboard(habits, page)
         reply_markup = keyboard
     
-    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    # Check if the current message has media and handle accordingly
+    if query.message.photo:
+        # If message has photo, edit caption instead of text
+        await query.edit_message_caption(caption=message, reply_markup=reply_markup, parse_mode='Markdown')
+    else:
+        # If message is text-only, edit text
+        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
 
 
 async def confirm_delete_habit(query, user_id: int, habit_id: str, db):
