@@ -199,7 +199,12 @@ class NewsService:
                 if len(desc) > 100:
                     desc = desc[:97] + "..."
                 message += f"<blockquote>{desc}</blockquote>\n"
-            message += "\n"
+            
+            # Add separator between news (except for the last article)
+            if i < start_idx + len(page_articles):
+                message += "───────────────\n"
+            else:
+                message += "\n"
         
         return message
     

@@ -2085,7 +2085,11 @@ class TeoBot:
                 title = article.get('title', '')
                 time = article.get('time', '')
                 if title:
-                    news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n\n"
+                    news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n"
+                    # Add separator between news (except for the last article)
+                    if i < min(5, len(latest_news['articles'])):
+                        news_section += "───────────────\n"
+                    news_section += "\n"
             news_section += "💡 <i>Ты можете ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или выбрать интересующую категорию.</i>"
         
         message = f"""{news_section}"""
@@ -2150,7 +2154,11 @@ class TeoBot:
                 title = article.get('title', '')
                 time = article.get('time', '')
                 if title:
-                    news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n\n"
+                    news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n"
+                    # Add separator between news (except for the last article)
+                    if i < start_idx + len(page_articles):
+                        news_section += "───────────────\n"
+                    news_section += "\n"
             news_section += "💡 <i>Ты можешь ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или выбрать интересующую категорию.</i>"
         
         message = f"""{news_section}"""
@@ -2223,7 +2231,11 @@ class TeoBot:
                 title = article.get('title', '')
                 time = article.get('time', '')
                 if title:
-                    news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n\n"
+                    news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n"
+                    # Add separator between news (except for the last article)
+                    if i < start_idx + len(page_articles):
+                        news_section += "───────────────\n"
+                    news_section += "\n"
             
             # Add description
             total_pages = NewsInterface.get_page_count(len(news_data['articles']))
