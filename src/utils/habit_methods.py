@@ -54,7 +54,6 @@ async def start_habit_creation_with_name(query, user_id: int, habit_name: str, h
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     # Set state for description input
-    from teo_bot import user_states
     user_states[user_id] = 'waiting_habit_description'
     
     await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')

@@ -29,7 +29,7 @@ from src.services.rain_monitor import RainMonitor
 from src.interfaces.interactive_settings import InteractiveSettings
 from src.services.habit_tracker import HabitTracker
 from src.interfaces.habit_interface import HabitInterface
-import src.utils.habit_methods
+import src.utils.habit_methods as habit_methods
 from src.services.news_service import news_service
 from src.interfaces.news_interface import NewsInterface
 from src.interfaces.finance_interface import FinanceInterface
@@ -51,6 +51,9 @@ scheduler = NotificationScheduler()
 rain_monitor = RainMonitor()
 habit_tracker = HabitTracker()
 db = DatabaseManager()
+
+# Import habit methods
+import src.utils.habit_methods as habit_methods
 
 # User state for handling custom input (still in-memory for session data)
 user_states: Dict[int, str] = {}
@@ -2089,7 +2092,6 @@ class TeoBot:
                     # Add separator between news (except for the last article)
                     if i < min(5, len(latest_news['articles'])):
                         news_section += "───────────────\n"
-                    news_section += "\n"
             news_section += "💡 <i>Ты можете ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или выбрать интересующую категорию.</i>"
         
         message = f"""{news_section}"""
@@ -2158,7 +2160,6 @@ class TeoBot:
                     # Add separator between news (except for the last article)
                     if i < start_idx + len(page_articles):
                         news_section += "───────────────\n"
-                    news_section += "\n"
             news_section += "💡 <i>Ты можешь ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или выбрать интересующую категорию.</i>"
         
         message = f"""{news_section}"""
@@ -2235,7 +2236,6 @@ class TeoBot:
                     # Add separator between news (except for the last article)
                     if i < start_idx + len(page_articles):
                         news_section += "───────────────\n"
-                    news_section += "\n"
             
             # Add description
             total_pages = NewsInterface.get_page_count(len(news_data['articles']))

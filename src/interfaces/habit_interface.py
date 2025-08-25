@@ -64,7 +64,7 @@ class HabitInterface:
         keyboard = []
         
         # Import here to avoid circular imports
-        from database import DatabaseManager
+        from src.database.database import DatabaseManager
         db = DatabaseManager()
         
         # Add habit buttons
@@ -105,7 +105,7 @@ class HabitInterface:
         keyboard = []
         
         # Import here to avoid circular imports
-        from database import DatabaseManager
+        from src.database.database import DatabaseManager
         db = DatabaseManager()
         
         # Completion button if not completed today
