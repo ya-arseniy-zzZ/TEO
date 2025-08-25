@@ -293,6 +293,11 @@ class TeoBot:
         user_state = user_states.get(user_id)
         context_state = context.user_data.get('waiting_for')
         
+        # Add debug logging
+        logger.info(f"Message from user {user_id}: '{message_text[:50]}...'")
+        logger.info(f"User state: {user_state}, Context state: {context_state}")
+        logger.info(f"Context user_data: {context.user_data}")
+        
         if user_state == 'waiting_city_input':
             await self._process_custom_city(update, user_id, message_text)
         elif user_state == 'waiting_time_input':
@@ -302,6 +307,7 @@ class TeoBot:
         elif user_state == 'waiting_habit_description':
             await self._process_habit_description(update, user_id, message_text)
         elif context_state == 'waiting_for_finance_sheet_url':
+            logger.info(f"Processing finance sheet URL: {message_text}")
             try:
                 await FinanceInterface.handle_sheet_url_input(update, context)
             except Exception as e:
@@ -313,6 +319,7 @@ class TeoBot:
                     ])
                 )
         else:
+            logger.info(f"No active state found, showing help message")
             # No active state, ignore or provide help
             await update.message.reply_text(
                 "Используй команды или кнопки для взаимодействия с ботом. Напиши /help для получения помощи.",
@@ -585,8 +592,10 @@ class TeoBot:
                 )
         
         elif query.data == 'finance_set_url':
+            logger.info(f"Finance set URL callback triggered for user {query.from_user.id}")
             try:
                 await FinanceInterface.handle_set_sheet_url(update, context)
+                logger.info(f"Finance set URL handler completed successfully")
             except Exception as e:
                 logger.error(f"Error in finance_set_url handler: {e}")
                 await query.edit_message_text(
