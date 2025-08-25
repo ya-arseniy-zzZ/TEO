@@ -4,7 +4,7 @@ Weather service for fetching weather data from OpenWeatherMap API
 import requests
 import logging
 from typing import Dict, Optional
-from config import WEATHER_API_KEY, WEATHER_API_BASE_URL, REQUEST_TIMEOUT
+from src.utils.config import WEATHER_API_KEY, WEATHER_API_BASE_URL, REQUEST_TIMEOUT
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

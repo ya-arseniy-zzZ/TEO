@@ -23,6 +23,6 @@ if [ ! -f ".env" ]; then
 fi
 
 # Запускаем бота
-python3 main.py
+python3 src/core/main.py
 
 

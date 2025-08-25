@@ -3,8 +3,8 @@ Additional habit tracking methods for Teo bot
 These methods are separated to keep the main bot file manageable
 """
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from habit_tracker import HabitTracker
-from habit_interface import HabitInterface
+from src.services.habit_tracker import HabitTracker
+from src.interfaces.habit_interface import HabitInterface
 
 # Import the global habit_tracker instance from teo_bot
 # We'll pass it as parameter instead to avoid circular imports

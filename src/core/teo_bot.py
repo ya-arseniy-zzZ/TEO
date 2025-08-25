@@ -4,6 +4,8 @@ Main bot implementation with weather notifications
 """
 import logging
 import asyncio
+import sys
+import os
 from datetime import datetime, time, timedelta
 from typing import Dict, Set, List
 import pytz
@@ -17,18 +19,21 @@ from telegram.ext import (
     ContextTypes
 )
 
-from config import BOT_TOKEN, DEFAULT_CITY, TIMEZONE
-from weather_service import WeatherService
-from notification_scheduler import NotificationScheduler
-from rain_monitor import RainMonitor
-from interactive_settings import InteractiveSettings
-from habit_tracker import HabitTracker
-from habit_interface import HabitInterface
-import habit_methods
-from news_service import news_service
-from news_interface import NewsInterface
-from database import DatabaseManager
-from migration import run_migration
+# Добавляем корневую директорию в путь для импортов
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from src.utils.config import BOT_TOKEN, DEFAULT_CITY, TIMEZONE
+from src.services.weather_service import WeatherService
+from src.services.notification_scheduler import NotificationScheduler
+from src.services.rain_monitor import RainMonitor
+from src.interfaces.interactive_settings import InteractiveSettings
+from src.services.habit_tracker import HabitTracker
+from src.interfaces.habit_interface import HabitInterface
+import src.utils.habit_methods
+from src.services.news_service import news_service
+from src.interfaces.news_interface import NewsInterface
+from src.database.database import DatabaseManager
+from src.database.migration import run_migration
 
 # Setup logging
 logging.basicConfig(
@@ -90,7 +95,7 @@ class TeoBot:
         
         try:
             # Use custom bot avatar image for start command
-            with open('bot_avatar_for_start.jpeg', 'rb') as photo:
+            with open('assets/bot_avatar_for_start.jpeg', 'rb') as photo:
                 await update.message.reply_photo(
                     photo=photo,
                     caption=welcome_message,
@@ -1526,7 +1531,7 @@ class TeoBot:
             
             try:
                 # Use custom weather avatar image
-                with open('bot_avatar_for_weather.jpg', 'rb') as photo:
+                with open('assets/bot_avatar_for_weather.jpg', 'rb') as photo:
                     await query.edit_message_media(
                         media=InputMediaPhoto(
                             media=photo,
@@ -1561,7 +1566,7 @@ class TeoBot:
             
             try:
                 # Try to use weather avatar for fallback too
-                with open('bot_avatar_for_weather.jpg', 'rb') as photo:
+                with open('assets/bot_avatar_for_weather.jpg', 'rb') as photo:
                     await query.edit_message_media(
                         media=InputMediaPhoto(
                             media=photo,
@@ -1830,7 +1835,7 @@ class TeoBot:
             
             # Send with news avatar image
             try:
-                with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+                with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                     await query.edit_message_media(
                         media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
                         reply_markup=keyboard
@@ -1861,7 +1866,7 @@ class TeoBot:
         
         # Send with news avatar image
         try:
-            with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+            with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                 await query.edit_message_media(
                     media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
                     reply_markup=keyboard
@@ -1889,7 +1894,7 @@ class TeoBot:
             
             # Send with news avatar image
             try:
-                with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+                with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                     await query.edit_message_media(
                         media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
                         reply_markup=keyboard
@@ -1926,7 +1931,7 @@ class TeoBot:
         
         # Send with news avatar image
         try:
-            with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+            with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                 await query.edit_message_media(
                     media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
                     reply_markup=keyboard
@@ -1957,7 +1962,7 @@ class TeoBot:
             
             # Send with news avatar image
             try:
-                with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+                with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                     await query.edit_message_media(
                         media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
                         reply_markup=reply_markup
@@ -2004,7 +2009,7 @@ class TeoBot:
         
         # Send with news avatar image
         try:
-            with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+            with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                 await query.edit_message_media(
                     media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
                     reply_markup=keyboard
@@ -2073,7 +2078,7 @@ class TeoBot:
         
         # Fallback to news avatar image
         try:
-            with open('bot_avatar_for_news.jpeg', 'rb') as photo:
+            with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                 await query.edit_message_media(
                     media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
                     reply_markup=keyboard
@@ -2212,7 +2217,7 @@ class TeoBot:
             
             try:
                 # Use custom bot avatar image
-                with open('bot_avatar.jpg', 'rb') as photo:
+                with open('assets/bot_avatar.jpg', 'rb') as photo:
                     await query.edit_message_media(
                         media=InputMediaPhoto(
                             media=photo,

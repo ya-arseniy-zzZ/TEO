@@ -10,7 +10,7 @@ import pytz
 import schedule
 import threading
 
-from config import TIMEZONE
+from src.utils.config import TIMEZONE
 
 logger = logging.getLogger(__name__)
 

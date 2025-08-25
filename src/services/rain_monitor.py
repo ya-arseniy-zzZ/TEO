@@ -9,8 +9,8 @@ from typing import Dict, Set, Callable, Optional
 import threading
 import time
 
-from weather_service import WeatherService
-from config import DEFAULT_CITY
+from src.services.weather_service import WeatherService
+from src.utils.config import DEFAULT_CITY
 
 logger = logging.getLogger(__name__)
 

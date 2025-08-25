@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  teo-bot:
+    build: .
+    container_name: teo-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - WEATHER_API_KEY=${WEATHER_API_KEY}
+      - DEFAULT_CITY=${DEFAULT_CITY}
+      - TIMEZONE=${TIMEZONE}
+    volumes:
+      - ./teo_bot.db:/app/teo_bot.db
+      - ./user_habits.json:/app/user_habits.json
+    networks:
+      - teo-network
+
+networks:
+  teo-network:
+    driver: bridge

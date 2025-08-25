@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
-DATABASE_PATH = "teo_bot.db"
+DATABASE_PATH = "data/teo_bot.db"
 
 
 class DatabaseManager:

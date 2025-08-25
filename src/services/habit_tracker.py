@@ -14,7 +14,7 @@ import time as time_module
 logger = logging.getLogger(__name__)
 
 # Simple file-based storage (in production, use a proper database)
-HABITS_FILE = "user_habits.json"
+HABITS_FILE = "data/user_habits.json"
 
 
 class Habit:

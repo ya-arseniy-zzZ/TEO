@@ -5,7 +5,12 @@ Run this file to start your bot
 """
 import sys
 import logging
-from teo_bot import TeoBot
+import sys
+import os
+# Добавляем корневую директорию в путь для импортов
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from src.core.teo_bot import TeoBot
 
 def main():
     """Main entry point for the bot"""

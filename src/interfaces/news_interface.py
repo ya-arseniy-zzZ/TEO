@@ -4,7 +4,7 @@ Provides interactive keyboards for news navigation
 """
 from typing import List, Dict, Tuple
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from news_service import news_service
+from src.services.news_service import news_service
 
 
 class NewsInterface:

@@ -6,7 +6,7 @@ import os
 import logging
 from datetime import datetime
 from typing import Dict
-from database import DatabaseManager
+from src.database.database import DatabaseManager
 
 logger = logging.getLogger(__name__)
 

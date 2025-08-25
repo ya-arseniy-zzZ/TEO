@@ -1,191 +1,164 @@
-# 🤖 Teo - Personal Assistant Bot
+# 🤖 Teo - Персональный Telegram Бот-Помощник
 
-Teo is your personal Telegram assistant that helps simplify your life. Currently features weather notifications with plans for expansion.
+Teo - это умный Telegram бот, который помогает пользователям получать актуальную погоду, новости и отслеживать привычки.
 
-## ✨ Features
+## 📁 Структура проекта
 
-- 🌤 **Current Weather**: Get instant weather updates for any city
-- 📅 **Weather Forecasts**: 3-day weather forecasts
-- 🔔 **Daily Notifications**: Automated daily weather notifications
-- ⚙️ **Customizable Settings**: Set your city, timezone, and notification preferences
-- 🌍 **Multi-timezone Support**: Works with any timezone
-- 📱 **Interactive Interface**: Easy-to-use buttons and commands
-
-## 🚀 Quick Start
-
-### 1. Prerequisites
-
-- Python 3.8 or higher
-- A Telegram account
-- OpenWeatherMap API account (free)
-
-### 2. Setup
-
-1. **Clone or download this project**
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Create a Telegram Bot:**
-   - Message [@BotFather](https://t.me/BotFather) on Telegram
-   - Use `/newbot` command and follow instructions
-   - Save the bot token you receive
-
-4. **Get Weather API Key:**
-   - Sign up at [OpenWeatherMap](https://openweathermap.org/api)
-   - Get your free API key
-
-5. **Configure Environment:**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` file with your credentials:
-   ```
-   TELEGRAM_BOT_TOKEN=your_bot_token_here
-   WEATHER_API_KEY=your_weather_api_key_here
-   DEFAULT_CITY=Your City
-   TIMEZONE=Your/Timezone
-   ```
-
-6. **Run the Bot:**
-   ```bash
-   python main.py
-   ```
-
-### 3. Start Using Teo
-
-1. Find your bot on Telegram (use the username you set with BotFather)
-2. Send `/start` to begin
-3. Set your city with `/setcity Your City`
-4. Enable notifications with `/notifications`
-
-## 📋 Commands
-
-### Basic Commands
-- `/start` - Initialize the bot and see welcome message
-- `/help` - Show all available commands
-- `/weather [city]` - Get current weather (uses your default city if not specified)
-- `/forecast [city]` - Get 3-day weather forecast
-
-### Settings Commands
-- `/setcity <city>` - Set your default city
-- `/notifications` - Manage daily weather notifications
-- `/settings` - View your current settings
-- `/timezone <timezone>` - Set your timezone
-
-### Examples
-```
-/weather London
-/setcity New York
-/timezone America/New_York
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `TELEGRAM_BOT_TOKEN` | Your Telegram bot token (required) | - |
-| `WEATHER_API_KEY` | OpenWeatherMap API key (required) | - |
-| `DEFAULT_CITY` | Default city for new users | London |
-| `TIMEZONE` | Default timezone | UTC |
-
-### Supported Timezones
-
-Use standard timezone names like:
-- `UTC`
-- `Europe/London`
-- `America/New_York`
-- `Asia/Tokyo`
-- `Australia/Sydney`
-
-## 📱 Usage Examples
-
-### Setting up notifications:
-1. `/setcity London` - Set your city
-2. `/notifications` - Open notification settings
-3. Click "🟢 Enable" to turn on daily notifications
-4. Use "⏰ Change Time" to set when you want to receive them
-
-### Getting weather information:
-- `/weather` - Current weather for your default city
-- `/weather Tokyo` - Current weather for Tokyo
-- `/forecast` - 3-day forecast for your default city
-- `/forecast Paris` - 3-day forecast for Paris
-
-## 🛠 Development
-
-### Project Structure
 ```
 TEO/
-├── main.py                 # Entry point
-├── teo_bot.py             # Main bot logic
-├── weather_service.py     # Weather API integration
-├── notification_scheduler.py # Notification scheduling
-├── config.py              # Configuration management
-├── requirements.txt       # Dependencies
-├── .env.example          # Environment template
-└── README.md             # This file
+├── src/                    # Исходный код
+│   ├── core/              # Основные компоненты
+│   │   ├── main.py        # Точка входа
+│   │   └── teo_bot.py     # Основной класс бота
+│   ├── services/          # Сервисы
+│   │   ├── weather_service.py      # Сервис погоды
+│   │   ├── news_service.py         # Сервис новостей
+│   │   ├── habit_tracker.py        # Трекер привычек
+│   │   ├── notification_scheduler.py # Планировщик уведомлений
+│   │   └── rain_monitor.py         # Мониторинг дождя
+│   ├── database/          # Работа с базой данных
+│   │   ├── database.py    # Менеджер БД
+│   │   └── migration.py   # Миграции
+│   ├── interfaces/        # Интерфейсы
+│   │   ├── habit_interface.py      # Интерфейс привычек
+│   │   ├── news_interface.py       # Интерфейс новостей
+│   │   └── interactive_settings.py # Интерактивные настройки
+│   └── utils/             # Утилиты
+│       ├── config.py      # Конфигурация
+│       └── habit_methods.py # Методы для привычек
+├── assets/                # Медиафайлы
+│   ├── bot_avatar.jpg
+│   ├── bot_avatar_for_news.jpeg
+│   ├── bot_avatar_for_start.jpeg
+│   └── bot_avatar_for_weather.jpg
+├── data/                  # Данные
+│   ├── teo_bot.db        # База данных SQLite
+│   └── user_habits.json  # Файл привычек
+├── scripts/              # Скрипты
+│   ├── start_teo.sh      # Запуск бота
+│   ├── backup.sh         # Резервное копирование
+│   ├── deploy.sh         # Деплой
+│   ├── monitor.sh        # Мониторинг
+│   └── update.sh         # Обновление
+├── docs/                 # Документация
+│   ├── README.md
+│   ├── README_DEPLOY.md
+│   ├── deploy-manual.md
+│   └── QUICK_START.md
+├── Dockerfile            # Docker конфигурация
+├── docker-compose.yml    # Docker Compose
+├── requirements.txt      # Python зависимости
+├── env_example          # Пример переменных окружения
+└── .gitignore           # Git ignore
 ```
 
-### Adding New Features
+## 🚀 Быстрый старт
 
-The bot is designed to be easily extensible. To add new features:
+### 1. Клонирование и настройка
 
-1. Add new command handlers in `teo_bot.py`
-2. Create service modules for external APIs
-3. Update the help text and README
+```bash
+git clone <repository-url>
+cd TEO
+cp env_example .env
+# Отредактируйте .env файл с вашими токенами
+```
 
-## 🐛 Troubleshooting
+### 2. Установка зависимостей
 
-### Common Issues
+```bash
+pip install -r requirements.txt
+```
 
-**Bot doesn't respond:**
-- Check if your bot token is correct in `.env`
-- Ensure the bot is running (`python main.py`)
-- Verify you've started a chat with the bot (`/start`)
+### 3. Запуск бота
 
-**Weather not working:**
-- Verify your OpenWeatherMap API key is valid
-- Check if the city name is spelled correctly
-- Try using a different city name format
+```bash
+# Простой запуск
+python3 src/core/main.py
 
-**Notifications not working:**
-- Ensure notifications are enabled (`/notifications`)
-- Check your timezone setting (`/settings`)
-- Verify the notification time is set correctly
+# Или используйте скрипт
+chmod +x scripts/start_teo.sh
+./scripts/start_teo.sh
+```
 
-### Logs
+## 🔧 Основные функции
 
-The bot logs important information to the console. Check the logs if something isn't working as expected.
+### 🌤 Погода
+- Текущая погода в любом городе
+- Прогноз на 3 дня
+- Уведомления о дожде
+- Настраиваемые параметры
 
-## 🔮 Future Features
+### 📰 Новости
+- Последние новости России
+- Категории новостей
+- Поиск по ключевым словам
+- Сохранение избранных новостей
 
-- 📊 Weather trends and analytics
-- 🎯 Location-based smart suggestions
-- 📅 Calendar integration
-- 🏠 Smart home control
-- 💼 Task management
-- 📰 News briefings
-- 🚗 Traffic updates
+### 🎯 Привычки
+- Создание и отслеживание привычек
+- Статистика выполнения
+- Напоминания
+- Цели и достижения
 
-## 📄 License
+## 🛠 Разработка
 
-This project is open source. Feel free to modify and extend it for your needs!
+### Структура кода
 
-## 🤝 Contributing
+- **`src/core/`** - Основные компоненты бота
+- **`src/services/`** - Бизнес-логика и внешние API
+- **`src/database/`** - Работа с данными
+- **`src/interfaces/`** - Пользовательские интерфейсы
+- **`src/utils/`** - Вспомогательные функции
 
-This is a personal project, but suggestions and improvements are welcome! Feel free to:
-- Report bugs
-- Suggest new features
-- Submit pull requests
+### Добавление новых функций
 
----
+1. Создайте новый сервис в `src/services/`
+2. Добавьте интерфейс в `src/interfaces/` если нужен UI
+3. Обновите `src/core/teo_bot.py` для интеграции
+4. Добавьте тесты и документацию
 
-**Enjoy using Teo! 🤖✨**
+## 📦 Деплой
 
+### Docker
 
+```bash
+docker build -t teo-bot .
+docker run -d --name teo-bot teo-bot
+```
+
+### Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+### Ручной деплой
+
+См. `docs/README_DEPLOY.md` для подробных инструкций.
+
+## 🔄 Резервное копирование
+
+```bash
+./scripts/backup.sh [instance-name]
+```
+
+## 📊 Мониторинг
+
+```bash
+./scripts/monitor.sh [instance-name]
+```
+
+## 🤝 Вклад в проект
+
+1. Форкните репозиторий
+2. Создайте ветку для новой функции
+3. Внесите изменения
+4. Создайте Pull Request
+
+## 📄 Лицензия
+
+MIT License
+
+## 📞 Поддержка
+
+Если у вас есть вопросы или проблемы, создайте Issue в репозитории.
