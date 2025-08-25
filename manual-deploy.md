@@ -180,3 +180,5 @@ docker-compose exec teo-bot bash
 # Проверить файлы в контейнере
 docker-compose exec teo-bot ls -la
 ```
+
+

@@ -131,3 +131,5 @@ log "Деплой завершен!"
 log "Для просмотра логов: ssh root@$SERVER_IP 'cd teo-bot && docker-compose logs -f'"
 log "Для остановки бота: ssh root@$SERVER_IP 'systemctl stop teo-bot.service'"
 log "Для запуска бота: ssh root@$SERVER_IP 'systemctl start teo-bot.service'"
+
+

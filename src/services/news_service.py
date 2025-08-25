@@ -203,8 +203,6 @@ class NewsService:
             # Add separator between news (except for the last article)
             if i < start_idx + len(page_articles):
                 message += "───────────────\n"
-            else:
-                message += "\n"
         
         return message
     

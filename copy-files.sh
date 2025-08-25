@@ -55,3 +55,5 @@ echo "chmod +x scripts/*.sh"
 echo "python3 -c \"from src.database.migration import run_schema_migration; run_schema_migration()\""
 echo "docker-compose build --no-cache"
 echo "docker-compose up -d"
+
+

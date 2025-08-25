@@ -19,3 +19,5 @@ services:
 networks:
   teo-network:
     driver: bridge
+
+

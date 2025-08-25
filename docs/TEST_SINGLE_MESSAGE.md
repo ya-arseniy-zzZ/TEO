@@ -117,3 +117,5 @@ logging.getLogger().setLevel(logging.DEBUG)
 2. **Проверьте базу данных** - `sqlite3 data/teo_bot.db`
 3. **Перезапустите бота** - `python3 test_single_message.py`
 4. **Обратитесь к документации** - `docs/single_message_interface.md`
+
+

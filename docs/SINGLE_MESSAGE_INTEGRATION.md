@@ -215,3 +215,5 @@ python3 -c "from src.database.migration import run_schema_migration; run_schema_
 # Проверить БД
 sqlite3 data/teo_bot.db ".schema users"
 ```
+
+

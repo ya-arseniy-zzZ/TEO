@@ -157,3 +157,5 @@ print_status "🎉 Деплой завершен успешно!"
 print_status "Бот доступен по адресу: $SERVER_IP"
 print_status "Для просмотра логов: ssh root@$SERVER_IP 'cd $REMOTE_DIR && docker-compose logs -f'"
 print_status "Для остановки: ssh root@$SERVER_IP 'cd $REMOTE_DIR && docker-compose down'"
+
+
