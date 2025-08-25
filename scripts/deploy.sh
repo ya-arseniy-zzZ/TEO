@@ -24,7 +24,7 @@ error() {
     echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
 }
 
-# Проверяем наличие Yandex CLI
+# Проверяем наличие CLI
 if ! command -v yc &> /dev/null; then
     error "CLI не установлен. Установите его для вашего облачного провайдера"
     exit 1
