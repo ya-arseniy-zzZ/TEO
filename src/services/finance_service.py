@@ -21,25 +21,44 @@ class FinanceService:
     def extract_sheet_id_from_url(self, url: str) -> Optional[str]:
         """Extract Google Sheet ID from URL"""
         try:
+            # Clean the URL - remove any extra parameters
+            url = url.strip()
+            
             # Handle different Google Sheets URL formats
-            if '/spreadsheets/d/' in url:
-                # Format: https://docs.google.com/spreadsheets/d/SHEET_ID/edit
-                match = re.search(r'/spreadsheets/d/([a-zA-Z0-9-_]+)', url)
+            patterns = [
+                # Standard format: https://docs.google.com/spreadsheets/d/SHEET_ID/edit
+                r'/spreadsheets/d/([a-zA-Z0-9-_]+)',
+                # Alternative format: https://docs.google.com/spreadsheets/d/SHEET_ID/view
+                r'/spreadsheets/d/([a-zA-Z0-9-_]+)',
+                # With query parameters: https://docs.google.com/spreadsheets/d/SHEET_ID/edit?usp=sharing
+                r'/spreadsheets/d/([a-zA-Z0-9-_]+)',
+                # Short format: https://docs.google.com/spreadsheets/d/SHEET_ID
+                r'/spreadsheets/d/([a-zA-Z0-9-_]+)',
+                # Direct ID format
+                r'^([a-zA-Z0-9-_]+)$'
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, url)
                 if match:
-                    return match.group(1)
-            elif 'docs.google.com' in url:
-                # Try to parse as URL
+                    sheet_id = match.group(1)
+                    # Validate sheet ID format (Google Sheets IDs are typically 44 characters)
+                    if len(sheet_id) >= 20 and len(sheet_id) <= 50:
+                        return sheet_id
+            
+            # If no pattern matched, try to parse as URL
+            if 'docs.google.com' in url:
                 parsed = urlparse(url)
                 if parsed.path:
                     match = re.search(r'/d/([a-zA-Z0-9-_]+)', parsed.path)
                     if match:
-                        return match.group(1)
+                        sheet_id = match.group(1)
+                        if len(sheet_id) >= 20 and len(sheet_id) <= 50:
+                            return sheet_id
             
-            # If it's just the ID
-            if re.match(r'^[a-zA-Z0-9-_]+$', url):
-                return url
-                
+            logger.warning(f"Could not extract sheet ID from URL: {url}")
             return None
+            
         except Exception as e:
             logger.error(f"Error extracting sheet ID from URL {url}: {e}")
             return None
@@ -59,20 +78,50 @@ class FinanceService:
             # Use Google Sheets public API (read-only, no auth required for public sheets)
             url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&range={range_name}"
             
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
+            response = self.session.get(url, timeout=15)
+            
+            # Check for specific error responses
+            if response.status_code == 403:
+                logger.error(f"Access denied to sheet {sheet_id}. Sheet might not be public.")
+                return None
+            elif response.status_code == 404:
+                logger.error(f"Sheet {sheet_id} not found.")
+                return None
+            elif response.status_code != 200:
+                logger.error(f"HTTP {response.status_code} error for sheet {sheet_id}")
+                return None
+            
+            # Check if response contains error message
+            if "error" in response.text.lower() or "access denied" in response.text.lower():
+                logger.error(f"Google Sheets API returned error for {sheet_id}: {response.text[:200]}")
+                return None
             
             # Parse CSV data
             lines = response.text.strip().split('\n')
-            data = []
+            if not lines:
+                logger.warning(f"Empty response from sheet {sheet_id}")
+                return None
             
+            data = []
             for line in lines:
                 # Remove quotes and split by comma
                 row = [cell.strip('"') for cell in line.split(',')]
                 data.append(row)
             
+            # Check if we have at least a header row
+            if len(data) < 1:
+                logger.warning(f"No data found in sheet {sheet_id}")
+                return None
+            
+            logger.info(f"Successfully fetched {len(data)} rows from sheet {sheet_id}")
             return data
             
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout while fetching sheet {sheet_id}")
+            return None
+        except requests.exceptions.ConnectionError:
+            logger.error(f"Connection error while fetching sheet {sheet_id}")
+            return None
         except Exception as e:
             logger.error(f"Error fetching sheet data for {sheet_id}: {e}")
             return None
@@ -100,18 +149,32 @@ class FinanceService:
             if header in expected_headers:
                 column_indices[header] = i
         
-        # If we don't have the expected headers, try to guess
+        # If we don't have the expected headers, try to guess by content
         if len(column_indices) < 4:
             # Try to find key columns by content
             for i, header in enumerate(headers):
-                if 'дата' in header.lower() or 'date' in header.lower():
+                header_lower = header.lower().strip()
+                if any(word in header_lower for word in ['дата', 'date', 'день']):
                     column_indices['Дата'] = i
-                elif 'сумма' in header.lower() or 'amount' in header.lower():
+                elif any(word in header_lower for word in ['сумма', 'amount', 'стоимость', 'цена']):
                     column_indices['Сумма'] = i
-                elif 'тип' in header.lower() or 'type' in header.lower():
+                elif any(word in header_lower for word in ['тип', 'type', 'вид']):
                     column_indices['Тип'] = i
-                elif 'категория' in header.lower() or 'category' in header.lower():
+                elif any(word in header_lower for word in ['категория', 'category', 'группа']):
                     column_indices['Основная категория'] = i
+                elif any(word in header_lower for word in ['описание', 'текст', 'комментарий', 'note']):
+                    column_indices['Текст'] = i
+        
+        # Log what we found
+        logger.info(f"Found columns: {column_indices}")
+        
+        # Check if we have the minimum required columns
+        required_columns = ['Дата', 'Сумма']
+        missing_columns = [col for col in required_columns if col not in column_indices]
+        if missing_columns:
+            logger.warning(f"Missing required columns: {missing_columns}")
+            logger.warning(f"Available headers: {headers}")
+            return []
         
         parsed_data = []
         
