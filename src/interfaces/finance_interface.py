@@ -19,6 +19,22 @@ class FinanceInterface:
     """Handles finance-related bot interactions"""
     
     @staticmethod
+    async def _edit_message_safely(query, text, reply_markup=None):
+        """Safely edit message, handling both text and photo messages"""
+        if query.message.photo:
+            await query.edit_message_caption(
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+        else:
+            await FinanceInterface._edit_message_safely(query, 
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+    
+    @staticmethod
     def create_finance_menu() -> InlineKeyboardMarkup:
         """Create main finance menu"""
         keyboard = [
@@ -65,23 +81,23 @@ class FinanceInterface:
         # Check if user has configured Google Sheets
         sheet_url = db.get_finance_settings(user_id)
         if not sheet_url:
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(
+                query,
                 "💰 *Финансовый анализ*\n\n"
                 "Для начала работы с финансовым анализом нужно настроить Google Sheets.\n\n"
                 "Нажмите кнопку ниже, чтобы указать ссылку на вашу таблицу:",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("⚙️ Настройки", callback_data='finance_settings')],
                     [InlineKeyboardButton("🔙 Назад", callback_data='main_menu')]
-                ]),
-                parse_mode='Markdown'
+                ])
             )
             return 'finance_menu'
         
-        await query.edit_message_text(
+        await FinanceInterface._edit_message_safely(
+            query,
             "💰 *Финансовый анализ*\n\n"
             "Выберите период для анализа ваших финансов:",
-            reply_markup=FinanceInterface.create_finance_menu(),
-            parse_mode='Markdown'
+            reply_markup=FinanceInterface.create_finance_menu()
         )
         return 'finance_menu'
     
@@ -99,12 +115,12 @@ class FinanceInterface:
         else:
             status_text = "❌ Таблица не настроена"
         
-        await query.edit_message_text(
+        await FinanceInterface._edit_message_safely(
+            query,
             f"⚙️ *Настройки финансов*\n\n"
             f"Статус: {status_text}\n\n"
             f"Выберите действие:",
-            reply_markup=FinanceInterface.create_settings_menu(),
-            parse_mode='Markdown'
+            reply_markup=FinanceInterface.create_settings_menu()
         )
         return 'finance_settings'
     
@@ -119,7 +135,22 @@ class FinanceInterface:
         # Set user state to wait for URL
         context.user_data['waiting_for'] = 'finance_sheet_url'
         
-        await query.edit_message_text(
+        # Check if the current message has media and handle accordingly
+        if query.message.photo:
+            await query.edit_message_caption(
+                caption="📝 *Настройка Google Sheets*\n\n"
+                "Отправьте ссылку на вашу Google таблицу.\n\n"
+                "Формат ссылки:\n"
+                "`https://docs.google.com/spreadsheets/d/SHEET_ID/edit`\n\n"
+                "⚠️ *Важно:* Таблица должна быть доступна для просмотра всем, у кого есть ссылка.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Отмена", callback_data='finance_settings')]
+                ]),
+                parse_mode='Markdown'
+            )
+        else:
+                    await FinanceInterface._edit_message_safely(
+            query,
             "📝 *Настройка Google Sheets*\n\n"
             "Отправьте ссылку на вашу Google таблицу.\n\n"
             "Формат ссылки:\n"
@@ -127,8 +158,7 @@ class FinanceInterface:
             "⚠️ *Важно:* Таблица должна быть доступна для просмотра всем, у кого есть ссылка.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 Отмена", callback_data='finance_settings')]
-            ]),
-            parse_mode='Markdown'
+            ])
         )
         return 'waiting_for_url'
     
@@ -203,26 +233,49 @@ class FinanceInterface:
         user_id = query.from_user.id
         sheet_url = db.get_finance_settings(user_id)
         
-        if sheet_url:
-            await query.edit_message_text(
-                f"🔗 *Текущая таблица*\n\n"
-                f"`{sheet_url}`\n\n"
-                f"Чтобы изменить, нажмите 'Указать ссылку на таблицу'",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📝 Изменить", callback_data='finance_set_url')],
-                    [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
-                ]),
-                parse_mode='Markdown'
-            )
+        # Check if the current message has media and handle accordingly
+        if query.message.photo:
+            if sheet_url:
+                await query.edit_message_caption(
+                    caption=f"🔗 *Текущая таблица*\n\n"
+                    f"`{sheet_url}`\n\n"
+                    f"Чтобы изменить, нажмите 'Указать ссылку на таблицу'",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📝 Изменить", callback_data='finance_set_url')],
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                    ]),
+                    parse_mode='Markdown'
+                )
+            else:
+                await query.edit_message_caption(
+                    caption="❌ Таблица не настроена.\n\n"
+                    "Нажмите 'Указать ссылку на таблицу' для настройки.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📝 Настроить", callback_data='finance_set_url')],
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                    ])
+                )
         else:
-            await query.edit_message_text(
-                "❌ Таблица не настроена.\n\n"
-                "Нажмите 'Указать ссылку на таблицу' для настройки.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📝 Настроить", callback_data='finance_set_url')],
-                    [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
-                ])
-            )
+            if sheet_url:
+                await FinanceInterface._edit_message_safely(query, 
+                    f"🔗 *Текущая таблица*\n\n"
+                    f"`{sheet_url}`\n\n"
+                    f"Чтобы изменить, нажмите 'Указать ссылку на таблицу'",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📝 Изменить", callback_data='finance_set_url')],
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                    ]),
+                    parse_mode='Markdown'
+                )
+            else:
+                await FinanceInterface._edit_message_safely(query, 
+                    "❌ Таблица не настроена.\n\n"
+                    "Нажмите 'Указать ссылку на таблицу' для настройки.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📝 Настроить", callback_data='finance_set_url')],
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                    ])
+                )
         
         return 'finance_settings'
     
@@ -236,7 +289,7 @@ class FinanceInterface:
         success = db.update_finance_settings(user_id, None)
         
         if success:
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(query, 
                 "✅ Настройки финансов удалены.\n\n"
                 "Вы можете настроить новую таблицу в любое время.",
                 reply_markup=InlineKeyboardMarkup([
@@ -245,7 +298,7 @@ class FinanceInterface:
                 ])
             )
         else:
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(query, 
                 "❌ Ошибка при удалении настроек.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
@@ -264,7 +317,7 @@ class FinanceInterface:
         sheet_url = db.get_finance_settings(user_id)
         
         if not sheet_url:
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(query, 
                 "❌ Таблица не настроена.\n\n"
                 "Сначала настройте Google Sheets в настройках.",
                 reply_markup=InlineKeyboardMarkup([
@@ -275,7 +328,7 @@ class FinanceInterface:
             return 'finance_menu'
         
         # Show loading message
-        await query.edit_message_text(
+        await FinanceInterface._edit_message_safely(query, 
             "⏳ Загружаю данные из таблицы...",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
@@ -288,7 +341,7 @@ class FinanceInterface:
             raw_data = finance_service.get_sheet_data(sheet_id)
             
             if not raw_data:
-                await query.edit_message_text(
+                await FinanceInterface._edit_message_safely(query, 
                     "❌ Не удалось получить данные из таблицы.\n\n"
                     "Проверьте настройки таблицы.",
                     reply_markup=InlineKeyboardMarkup([
@@ -336,7 +389,7 @@ class FinanceInterface:
                 [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
             ]
             
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(query, 
                 message,
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='Markdown'
@@ -344,7 +397,7 @@ class FinanceInterface:
             
         except Exception as e:
             logger.error(f"Error analyzing finances for user {user_id}: {e}")
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(query, 
                 "❌ Ошибка при анализе данных.\n\n"
                 "Попробуйте позже или проверьте настройки таблицы.",
                 reply_markup=InlineKeyboardMarkup([
@@ -400,7 +453,7 @@ class FinanceInterface:
                 [InlineKeyboardButton("🏠 Главное меню", callback_data='finance_menu')]
             ]
             
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(query, 
                 message,
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='Markdown'
@@ -408,7 +461,7 @@ class FinanceInterface:
             
         except Exception as e:
             logger.error(f"Error in detailed analysis for user {user_id}: {e}")
-            await query.edit_message_text(
+            await FinanceInterface._edit_message_safely(query, 
                 "❌ Ошибка при детальном анализе.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
