@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Скрипт для деплоя Teo Bot на Яндекс.Облако
+# Скрипт для деплоя Teo Bot в облако
 # Использование: ./deploy.sh [instance-name]
 
 set -e
@@ -26,13 +26,13 @@ error() {
 
 # Проверяем наличие Yandex CLI
 if ! command -v yc &> /dev/null; then
-    error "Yandex CLI не установлен. Установите его: https://cloud.yandex.ru/docs/cli/quickstart"
+    error "CLI не установлен. Установите его для вашего облачного провайдера"
     exit 1
 fi
 
 # Проверяем авторизацию
 if ! yc config list &> /dev/null; then
-    error "Не авторизован в Yandex CLI. Выполните: yc init"
+    error "Не авторизован в CLI. Выполните: yc init"
     exit 1
 fi
 

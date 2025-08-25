@@ -1,14 +1,14 @@
-# Инструкция по деплою Teo Bot на Яндекс.Облако
+# Инструкция по деплою Teo Bot в облако
 
 ## Подготовка
 
-### 1. Установка Yandex CLI
+### 1. Установка CLI (опционально)
 ```bash
 curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
 exec -l $SHELL
 ```
 
-### 2. Авторизация в Yandex Cloud
+### 2. Авторизация в облаке
 ```bash
 yc init
 ```
