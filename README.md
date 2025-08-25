@@ -15,13 +15,15 @@ TEO/
 │   │   ├── news_service.py         # Сервис новостей
 │   │   ├── habit_tracker.py        # Трекер привычек
 │   │   ├── notification_scheduler.py # Планировщик уведомлений
-│   │   └── rain_monitor.py         # Мониторинг дождя
+│   │   ├── rain_monitor.py         # Мониторинг дождя
+│   │   └── finance_service.py      # Сервис финансового анализа
 │   ├── database/          # Работа с базой данных
 │   │   ├── database.py    # Менеджер БД
 │   │   └── migration.py   # Миграции
 │   ├── interfaces/        # Интерфейсы
 │   │   ├── habit_interface.py      # Интерфейс привычек
 │   │   ├── news_interface.py       # Интерфейс новостей
+│   │   ├── finance_interface.py    # Интерфейс финансового анализа
 │   │   └── interactive_settings.py # Интерактивные настройки
 │   └── utils/             # Утилиты
 │       ├── config.py      # Конфигурация
@@ -44,7 +46,8 @@ TEO/
 │   ├── README.md
 │   ├── README_DEPLOY.md
 │   ├── deploy-manual.md
-│   └── QUICK_START.md
+│   ├── QUICK_START.md
+│   └── finance_integration.md # Документация по финансам
 ├── Dockerfile            # Docker конфигурация
 ├── docker-compose.yml    # Docker Compose
 ├── requirements.txt      # Python зависимости
@@ -98,6 +101,12 @@ chmod +x scripts/start_teo.sh
 - Создание и отслеживание привычек
 - Статистика выполнения
 - Напоминания
+
+### 💰 Финансы
+- Интеграция с Google Sheets
+- Анализ доходов и расходов
+- Категоризация трат
+- Статистика по периодам
 - Цели и достижения
 
 ## 🛠 Разработка

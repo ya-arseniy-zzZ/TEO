@@ -113,6 +113,19 @@ class DataMigration:
         stats = self.db.get_database_stats()
         logger.info(f"Migration verification - Database stats: {stats}")
         return stats
+    
+    def migrate_schema(self) -> None:
+        """Migrate database schema (add new columns, tables, etc.)"""
+        try:
+            logger.info("Starting schema migration...")
+            
+            # Add google_sheets_url column to users table if it doesn't exist
+            self.db.add_column_if_not_exists('users', 'google_sheets_url', 'TEXT')
+            
+            logger.info("Schema migration completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Error during schema migration: {e}")
 
 
 def run_migration():
@@ -122,7 +135,8 @@ def run_migration():
     # Check if migration is needed
     stats = migration.db.get_database_stats()
     if stats.get('active_users', 0) > 0:
-        logger.info("Database already contains data, skipping migration")
+        logger.info("Database already contains data, running schema migration only")
+        migration.migrate_schema()
         return True
     
     # Run migration
@@ -134,6 +148,13 @@ def run_migration():
         logger.info(f"Migration completed. Final stats: {final_stats}")
     
     return success
+
+
+def run_schema_migration():
+    """Run schema migration only (for existing databases)"""
+    migration = DataMigration()
+    migration.migrate_schema()
+    return True
 
 
 if __name__ == "__main__":

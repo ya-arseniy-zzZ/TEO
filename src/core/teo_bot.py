@@ -32,6 +32,7 @@ from src.interfaces.habit_interface import HabitInterface
 import src.utils.habit_methods
 from src.services.news_service import news_service
 from src.interfaces.news_interface import NewsInterface
+from src.interfaces.finance_interface import FinanceInterface
 from src.database.database import DatabaseManager
 from src.database.migration import run_migration
 
@@ -298,6 +299,8 @@ class TeoBot:
             await self._process_custom_habit_name(update, user_id, message_text)
         elif user_state == 'waiting_habit_description':
             await self._process_habit_description(update, user_id, message_text)
+        elif user_state == 'waiting_for_finance_sheet_url':
+            await FinanceInterface.handle_sheet_url_input(update, context)
         else:
             # No active state, ignore or provide help
             await update.message.reply_text(
@@ -545,6 +548,30 @@ class TeoBot:
         
         elif query.data == 'news_menu':
             await self._show_news_menu(query)
+        
+        elif query.data == 'finance_menu':
+            await FinanceInterface.handle_finance_menu(update, context)
+        
+        elif query.data == 'finance_settings':
+            await FinanceInterface.handle_finance_settings(update, context)
+        
+        elif query.data == 'finance_set_url':
+            await FinanceInterface.handle_set_sheet_url(update, context)
+        
+        elif query.data == 'finance_show_url':
+            await FinanceInterface.handle_show_sheet_url(update, context)
+        
+        elif query.data == 'finance_clear_settings':
+            await FinanceInterface.handle_clear_settings(update, context)
+        
+        elif query.data.startswith('finance_'):
+            # Handle finance analysis periods
+            if query.data in ['finance_day', 'finance_week', 'finance_month', 'finance_year', 'finance_all']:
+                period = query.data.replace('finance_', '')
+                await FinanceInterface.handle_finance_analysis(update, context, period)
+            elif query.data.startswith('finance_detailed_'):
+                period = query.data.replace('finance_detailed_', '')
+                await FinanceInterface.handle_detailed_analysis(update, context, period)
         
         elif query.data == 'main_settings':
             await self._show_main_settings(query, user_id)
@@ -2210,6 +2237,7 @@ class TeoBot:
                 [InlineKeyboardButton("🌤 Погода", callback_data='weather_menu')],
                 [InlineKeyboardButton("📰 Новости", callback_data='news_menu')],
                 [InlineKeyboardButton("🎯 Привычки", callback_data='habits_menu')],
+                [InlineKeyboardButton("💰 Финансы", callback_data='finance_menu')],
                 [InlineKeyboardButton("⚙️ Настройки", callback_data='main_settings')],
                 [InlineKeyboardButton("ℹ️ Помощь", callback_data='help')]
             ]
@@ -2246,6 +2274,7 @@ class TeoBot:
                 [InlineKeyboardButton("🌤 Погода", callback_data='weather_menu')],
                 [InlineKeyboardButton("📰 Новости", callback_data='news_menu')],
                 [InlineKeyboardButton("🎯 Привычки", callback_data='habits_menu')],
+                [InlineKeyboardButton("💰 Финансы", callback_data='finance_menu')],
                 [InlineKeyboardButton("⚙️ Настройки", callback_data='main_settings')],
                 [InlineKeyboardButton("ℹ️ Помощь", callback_data='help')]
             ]

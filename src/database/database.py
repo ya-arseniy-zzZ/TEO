@@ -512,3 +512,54 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error cleaning up old data: {e}")
             return False
+    
+    # Finance settings operations
+    def get_finance_settings(self, user_id: int) -> Optional[str]:
+        """Get Google Sheets URL for user's finance tracking"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT google_sheets_url FROM users WHERE user_id = ?
+                """, (user_id,))
+                row = cursor.fetchone()
+                return row[0] if row and row[0] else None
+        except Exception as e:
+            logger.error(f"Error getting finance settings for user {user_id}: {e}")
+            return None
+    
+    def update_finance_settings(self, user_id: int, google_sheets_url: str = None) -> bool:
+        """Update Google Sheets URL for user's finance tracking"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users SET google_sheets_url = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                """, (google_sheets_url, user_id))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error updating finance settings for user {user_id}: {e}")
+            return False
+    
+    def add_column_if_not_exists(self, table: str, column: str, column_type: str) -> bool:
+        """Add a column to a table if it doesn't exist"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Check if column exists
+                cursor.execute(f"PRAGMA table_info({table})")
+                columns = [row[1] for row in cursor.fetchall()]
+                
+                if column not in columns:
+                    cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
+                    logger.info(f"Added column {column} to table {table}")
+                    return True
+                else:
+                    logger.info(f"Column {column} already exists in table {table}")
+                    return True
+                    
+        except Exception as e:
+            logger.error(f"Error adding column {column} to table {table}: {e}")
+            return False
