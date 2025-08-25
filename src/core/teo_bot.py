@@ -289,7 +289,9 @@ class TeoBot:
         user_id = update.effective_user.id
         message_text = update.message.text.strip()
         
+        # Check both user_states and context.user_data for state
         user_state = user_states.get(user_id)
+        context_state = context.user_data.get('waiting_for')
         
         if user_state == 'waiting_city_input':
             await self._process_custom_city(update, user_id, message_text)
@@ -299,7 +301,7 @@ class TeoBot:
             await self._process_custom_habit_name(update, user_id, message_text)
         elif user_state == 'waiting_habit_description':
             await self._process_habit_description(update, user_id, message_text)
-        elif user_state == 'waiting_for_finance_sheet_url':
+        elif context_state == 'waiting_for_finance_sheet_url':
             try:
                 await FinanceInterface.handle_sheet_url_input(update, context)
             except Exception as e:
