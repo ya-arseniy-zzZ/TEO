@@ -1,0 +1,19 @@
+Резервная копия Teo Bot
+Дата создания: Mon Aug 25 15:59:12 MSK 2025
+Инстанс: teo-bot-instance
+IP адрес: 158.160.36.185
+
+Содержимое бэкапа:
+total 136
+drwxr-xr-x@ 7 arsenijzacepilin  staff    224 Aug 25 15:59 .
+drwxr-xr-x@ 4 arsenijzacepilin  staff    128 Aug 25 15:59 ..
+-rw-r--r--@ 1 arsenijzacepilin  staff      0 Aug 25 15:59 backup_info.txt
+-rw-r--r--@ 1 arsenijzacepilin  staff    368 Aug 25 15:59 env_20250825_125911.env
+-rw-r--r--@ 1 arsenijzacepilin  staff   4071 Aug 25 15:59 full_backup_20250825_125911.tar.gz
+-rw-r--r--@ 1 arsenijzacepilin  staff  57344 Aug 25 15:59 teo_bot_20250825_125911.db
+-rw-r--r--@ 1 arsenijzacepilin  staff    486 Aug 25 15:59 user_habits_20250825_125911.json
+
+Для восстановления:
+1. Остановите бота: ./update.sh teo-bot-instance
+2. Скопируйте нужные файлы обратно на сервер
+3. Перезапустите бота: ./update.sh teo-bot-instance
