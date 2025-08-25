@@ -10,6 +10,24 @@ from src.interfaces.habit_interface import HabitInterface
 # We'll pass it as parameter instead to avoid circular imports
 
 
+async def edit_message_safely(query, text: str, reply_markup=None, parse_mode='Markdown'):
+    """Safely edit message, handling both text and media messages"""
+    try:
+        # Try to edit as text message first
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    except Exception as e:
+        if "no text in the message" in str(e) or "message is not modified" in str(e):
+            # If it's a media message, try to edit caption
+            try:
+                await query.edit_message_caption(text, reply_markup=reply_markup, parse_mode=parse_mode)
+            except Exception as caption_error:
+                # If caption editing fails, send a new message
+                await query.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+        else:
+            # For other errors, send a new message
+            await query.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+
+
 async def show_habit_creation(query, user_id: int, habit_creation_data, user_states, habit_tracker):
     """Show habit creation options"""
     message = """➕ **Создание новой привычки**
@@ -19,7 +37,7 @@ async def show_habit_creation(query, user_id: int, habit_creation_data, user_sta
 Выбери готовую привычку из списка или создай свою:"""
     
     keyboard, has_next = HabitInterface.create_habit_suggestions_keyboard(0)
-    await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+    await edit_message_safely(query, message, keyboard)
 
 
 async def show_habit_suggestions(query, user_id: int, page: int):
@@ -29,7 +47,7 @@ async def show_habit_suggestions(query, user_id: int, page: int):
 Выбери привычку из списка или создай свою:"""
     
     keyboard, has_next = HabitInterface.create_habit_suggestions_keyboard(page)
-    await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+    await edit_message_safely(query, message, keyboard)
 
 
 async def start_habit_creation_with_name(query, user_id: int, habit_name: str, habit_creation_data):
@@ -56,7 +74,7 @@ async def start_habit_creation_with_name(query, user_id: int, habit_name: str, h
     # Set state for description input
     user_states[user_id] = 'waiting_habit_description'
     
-    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    await edit_message_safely(query, message, reply_markup)
 
 
 async def show_custom_habit_input(query, user_id: int, user_states):
@@ -80,7 +98,7 @@ async def show_custom_habit_input(query, user_id: int, user_states):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    await edit_message_safely(query, message, reply_markup)
 
 
 async def process_custom_habit_name(update, user_id: int, habit_name: str, habit_creation_data, user_states):
@@ -135,7 +153,7 @@ async def show_habit_time_selection(update_or_query, user_id: int, page: int, ha
     if is_message:
         await update_or_query.message.reply_text(message, reply_markup=keyboard, parse_mode='Markdown')
     else:
-        await update_or_query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+        await edit_message_safely(update_or_query, message, keyboard)
 
 
 async def set_habit_time(query, user_id: int, time_str: str, habit_creation_data):
@@ -159,7 +177,7 @@ async def show_days_selection(query, user_id: int, habit_creation_data):
 Текущий выбор: {len(selected_days)}/7 дней"""
     
     keyboard = HabitInterface.create_days_selection_keyboard(selected_days)
-    await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+    await edit_message_safely(query, message, keyboard)
 
 
 async def toggle_habit_day(query, user_id: int, day: str, habit_creation_data):
@@ -207,9 +225,10 @@ async def finalize_habit_creation(query, user_id: int, habit_creation_data, db):
     habit_data = habit_creation_data.get(user_id)
     
     if not habit_data:
-        await query.edit_message_text(
+        await edit_message_safely(
+            query,
             "❌ Ошибка создания привычки. Попробуй ещё раз.",
-            reply_markup=InlineKeyboardMarkup([
+            InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 К привычкам", callback_data='habits_menu')]
             ])
         )
@@ -252,7 +271,7 @@ async def finalize_habit_creation(query, user_id: int, habit_creation_data, db):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    await edit_message_safely(query, message, reply_markup)
 
 
 async def show_habit_management(query, user_id: int, page: int, db):
@@ -278,13 +297,8 @@ async def show_habit_management(query, user_id: int, page: int, db):
         keyboard, has_next = HabitInterface.create_management_keyboard(habits, page)
         reply_markup = keyboard
     
-    # Check if the current message has media and handle accordingly
-    if query.message.photo:
-        # If message has photo, edit caption instead of text
-        await query.edit_message_caption(caption=message, reply_markup=reply_markup, parse_mode='Markdown')
-    else:
-        # If message is text-only, edit text
-        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    # Use safe message editing
+    await edit_message_safely(query, message, reply_markup)
 
 
 async def confirm_delete_habit(query, user_id: int, habit_id: str, db):
@@ -292,9 +306,10 @@ async def confirm_delete_habit(query, user_id: int, habit_id: str, db):
     habit = db.get_habit(habit_id)
     
     if not habit or habit['user_id'] != user_id:
-        await query.edit_message_text(
+        await edit_message_safely(
+            query,
             "❌ Привычка не найдена.",
-            reply_markup=InlineKeyboardMarkup([
+            InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 К привычкам", callback_data='habits_menu')]
             ])
         )
@@ -308,7 +323,7 @@ async def confirm_delete_habit(query, user_id: int, habit_id: str, db):
 Это действие нельзя отменить."""
     
     keyboard = HabitInterface.create_confirmation_keyboard('delete', habit_id)
-    await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+    await edit_message_safely(query, message, keyboard)
 
 
 async def delete_habit(query, user_id: int, habit_id: str, db):
@@ -332,7 +347,7 @@ async def delete_habit(query, user_id: int, habit_id: str, db):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    await edit_message_safely(query, message, reply_markup)
 
 
 async def edit_habit(query, user_id: int, habit_id: str):
@@ -349,7 +364,7 @@ async def edit_habit(query, user_id: int, habit_id: str):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    await edit_message_safely(query, message, reply_markup)
 
 
 async def show_habit_time_selection(query, user_id: int, page: int, habit_creation_data):
@@ -359,7 +374,7 @@ async def show_habit_time_selection(query, user_id: int, page: int, habit_creati
 Выбери время для напоминаний о привычке:"""
     
     keyboard, has_next = HabitInterface.create_habit_time_keyboard(page)
-    await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+    await edit_message_safely(query, message, keyboard)
 
 
 async def set_habit_time(query, user_id: int, time_str: str, habit_creation_data):
@@ -372,12 +387,13 @@ async def set_habit_time(query, user_id: int, time_str: str, habit_creation_data
 Теперь выбери дни недели для напоминаний:"""
         
         keyboard = HabitInterface.create_days_selection_keyboard()
-        await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+        await edit_message_safely(query, message, keyboard)
     else:
         # If no habit creation data, go back to habit creation
-        await query.edit_message_text(
+        await edit_message_safely(
+            query,
             "❌ Ошибка. Попробуй создать привычку заново.",
-            reply_markup=InlineKeyboardMarkup([
+            InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 К привычкам", callback_data='habits_menu')]
             ])
         )
@@ -385,7 +401,6 @@ async def set_habit_time(query, user_id: int, time_str: str, habit_creation_data
 
 async def show_custom_habit_time_input(query, user_id: int, habit_creation_data):
     """Show custom habit time input instructions"""
-    from teo_bot import user_states
     user_states[user_id] = 'waiting_habit_time_input'
     
     message = """✏️ **Ввод своего времени**
@@ -400,7 +415,7 @@ async def show_custom_habit_time_input(query, user_id: int, habit_creation_data)
 Просто отправь сообщение с временем."""
     
     keyboard = HabitInterface.create_custom_habit_time_keyboard()
-    await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
+    await edit_message_safely(query, message, keyboard)
 
 
 async def process_custom_habit_time(update, user_id: int, time_str: str, habit_creation_data, user_states):
