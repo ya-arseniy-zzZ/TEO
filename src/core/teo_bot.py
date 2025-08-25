@@ -35,6 +35,8 @@ from src.interfaces.news_interface import NewsInterface
 from src.interfaces.finance_interface import FinanceInterface
 from src.database.database import DatabaseManager
 from src.database.migration import run_migration
+from src.utils.keyboards import KeyboardBuilder
+from src.utils.messages import MessageBuilder
 
 # Setup logging
 logging.basicConfig(
@@ -80,37 +82,20 @@ class TeoBot:
         if weather_settings and weather_settings.get('rain_alerts_enabled'):
             rain_monitor.enable_rain_alerts(user_id, weather_settings)
         
-        welcome_message = f"""👋 Привет, {user_name}! Я Тео, твой персональный помощник!
-
-Я помогу тебе:
-🌤 Получать актуальную погоду и прогнозы
-📰 Читать последние новости России
-🎯 Отслеживать привычки и достигать целей
-
-Нажми кнопку ниже, чтобы начать:"""
+        # Create main message for single message interface
+        message = await update.message.reply_text(
+            MessageBuilder.welcome_message(user_name),
+            reply_markup=KeyboardBuilder.main_menu(),
+            parse_mode='Markdown'
+        )
         
-        keyboard = [
-            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        # Save main message ID to database
+        db.save_user_main_message(user_id, message.message_id)
         
-        try:
-            # Use custom bot avatar image for start command
-            with open('assets/bot_avatar_for_start.jpeg', 'rb') as photo:
-                await update.message.reply_photo(
-                    photo=photo,
-                    caption=welcome_message,
-                    reply_markup=reply_markup,
-                    parse_mode='Markdown'
-                )
-        except FileNotFoundError:
-            # Fallback to text message if image file not found
-            logger.warning("Start avatar image not found, using text message")
-            await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
-        except Exception as e:
-            # Fallback to text message if error
-            logger.error(f"Error displaying start avatar: {e}")
-            await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
+        # Delete the /start command
+        await update.message.delete()
+        
+        logger.info(f"User {user_id} started bot with main message {message.message_id}")
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /help command"""
@@ -298,35 +283,60 @@ class TeoBot:
         logger.info(f"User state: {user_state}, Context state: {context_state}")
         logger.info(f"Context user_data: {context.user_data}")
         
+        # Get main message ID for single message interface
+        main_message_id = db.get_user_main_message_id(user_id)
+        
         if user_state == 'waiting_city_input':
-            await self._process_custom_city(update, user_id, message_text)
+            await self._process_custom_city_single_message(update, user_id, message_text, main_message_id)
         elif user_state == 'waiting_time_input':
-            await self._process_custom_time(update, user_id, message_text)
+            await self._process_custom_time_single_message(update, user_id, message_text, main_message_id)
         elif user_state == 'waiting_habit_name':
-            await self._process_custom_habit_name(update, user_id, message_text)
+            await self._process_custom_habit_name_single_message(update, user_id, message_text, main_message_id)
         elif user_state == 'waiting_habit_description':
-            await self._process_habit_description(update, user_id, message_text)
+            await self._process_habit_description_single_message(update, user_id, message_text, main_message_id)
         elif context_state == 'waiting_for_finance_sheet_url':
             logger.info(f"Processing finance sheet URL: {message_text}")
             try:
                 await FinanceInterface.handle_sheet_url_input(update, context)
             except Exception as e:
                 logger.error(f"Error in finance sheet URL input handler: {e}")
-                await update.message.reply_text(
-                    "❌ Произошла ошибка при обработке ссылки на таблицу.",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
-                    ])
-                )
+                if main_message_id:
+                    await context.bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=main_message_id,
+                        text="❌ Произошла ошибка при обработке ссылки на таблицу.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                        ])
+                    )
+                else:
+                    await update.message.reply_text(
+                        "❌ Произошла ошибка при обработке ссылки на таблицу.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                        ])
+                    )
         else:
             logger.info(f"No active state found, showing help message")
-            # No active state, ignore or provide help
-            await update.message.reply_text(
-                "Используй команды или кнопки для взаимодействия с ботом. Напиши /help для получения помощи.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
-                ])
-            )
+            # No active state, show help in main message
+            if main_message_id:
+                await context.bot.edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=main_message_id,
+                    text="❓ Неизвестная команда\n\nИспользуйте кнопки для навигации.",
+                    reply_markup=KeyboardBuilder.back_to_main(),
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text(
+                    "Используй команды или кнопки для взаимодействия с ботом. Напиши /help для получения помощи.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ])
+                )
+        
+        # Always delete user message for single message interface
+        await update.message.delete()
     
     async def _process_custom_city(self, update: Update, user_id: int, city_name: str) -> None:
         """Process custom city input"""
@@ -523,6 +533,9 @@ class TeoBot:
         await query.answer()
         
         user_id = query.from_user.id
+        
+        # Get main message ID for single message interface
+        main_message_id = db.get_user_main_message_id(user_id)
         
         if query.data == 'main_menu':
             await self._show_main_menu(query)
@@ -1315,6 +1328,133 @@ class TeoBot:
     async def _process_habit_description(self, update, user_id: int, description: str) -> None:
         await habit_methods.process_habit_description(update, user_id, description, habit_creation_data, user_states)
     
+    # Single Message Interface methods
+    async def _process_custom_city_single_message(self, update: Update, user_id: int, city_name: str, main_message_id: int) -> None:
+        """Process custom city input for single message interface"""
+        # Clear user state
+        user_states.pop(user_id, None)
+        
+        # Test if the city is valid by fetching weather
+        weather_data = weather_service.get_current_weather(city_name)
+        
+        if weather_data:
+            # Update user settings
+            if user_id not in user_settings:
+                user_settings[user_id] = {}
+            user_settings[user_id]['city'] = weather_data['city']
+            
+            # Update rain monitoring with new city
+            if user_settings[user_id].get('rain_alerts_enabled', True):
+                rain_monitor.update_user_city(user_id, weather_data['city'])
+            
+            message = f"✅ Город изменен на **{weather_data['city']}, {weather_data['country']}**"
+            
+            keyboard = [
+                [InlineKeyboardButton("🌤 Посмотреть погоду", callback_data='current_weather')],
+                [InlineKeyboardButton("⚙️ Настройки", callback_data='settings')],
+                [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            if main_message_id:
+                await update.get_bot().edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=main_message_id,
+                    text=message,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        else:
+            message = f"❌ Не удалось найти город '{city_name}'. Проверь правописание и попробуй ещё раз."
+            
+            keyboard = [
+                [InlineKeyboardButton("🔙 К выбору городов", callback_data='city_page_0')],
+                [InlineKeyboardButton("⚙️ Настройки", callback_data='settings')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            if main_message_id:
+                await update.get_bot().edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=main_message_id,
+                    text=message,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    async def _process_custom_time_single_message(self, update: Update, user_id: int, time_str: str, main_message_id: int) -> None:
+        """Process custom time input for single message interface"""
+        # Clear user state
+        user_states.pop(user_id, None)
+        
+        try:
+            from datetime import datetime
+            datetime.strptime(time_str, '%H:%M')  # Validate time format
+            
+            # Update user settings
+            if user_id not in user_settings:
+                user_settings[user_id] = {}
+            user_settings[user_id]['notification_time'] = time_str
+            
+            # Update scheduler if notifications are enabled
+            if user_settings[user_id].get('notifications_enabled', False):
+                scheduler.update_user_time(user_id, time_str)
+            
+            message = f"✅ Время уведомлений изменено на **{time_str}**"
+            
+            keyboard = [
+                [InlineKeyboardButton("🔔 Настройки уведомлений", callback_data='notifications_menu')],
+                [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            if main_message_id:
+                await update.get_bot().edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=main_message_id,
+                    text=message,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+            
+        except ValueError:
+            message = f"❌ Неверный формат времени '{time_str}'. Используй формат ЧЧ:ММ (например, 08:30)."
+            
+            keyboard = [
+                [InlineKeyboardButton("🔙 К выбору времени", callback_data='time_page_0')],
+                [InlineKeyboardButton("🔔 К уведомлениям", callback_data='notifications_menu')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            if main_message_id:
+                await update.get_bot().edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=main_message_id,
+                    text=message,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    async def _process_custom_habit_name_single_message(self, update: Update, user_id: int, habit_name: str, main_message_id: int) -> None:
+        """Process custom habit name input for single message interface"""
+        # This would need to be implemented based on habit_methods
+        # For now, we'll use the existing method
+        await self._process_custom_habit_name(update, user_id, habit_name)
+    
+    async def _process_habit_description_single_message(self, update: Update, user_id: int, description: str, main_message_id: int) -> None:
+        """Process habit description input for single message interface"""
+        # This would need to be implemented based on habit_methods
+        # For now, we'll use the existing method
+        await self._process_habit_description(update, user_id, description)
+    
     async def _show_habit_time_selection(self, query, user_id: int, page: int) -> None:
         await habit_methods.show_habit_time_selection(query, user_id, page, habit_creation_data)
     
@@ -1455,22 +1595,12 @@ class TeoBot:
     async def _show_main_menu(self, query) -> None:
         """Show the main menu"""
         user_name = query.from_user.first_name
-        welcome_message = f"""👋 Привет, {user_name}! Я Тео, твой персональный помощник!
-
-🌤 Получай актуальную информацию о погоде
-🎯 Отслеживай свои привычки и достигай целей
-ℹ️ Узнай, как пользоваться всеми функциями
-
-Выбери нужный раздел:"""
         
-        keyboard = [
-            [InlineKeyboardButton("🌤 Погода", callback_data='weather_menu')],
-            [InlineKeyboardButton("🎯 Привычки", callback_data='habits_menu')],
-            [InlineKeyboardButton("⚙️ Настройки", callback_data='main_settings')],
-            [InlineKeyboardButton("ℹ️ Помощь", callback_data='help')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(
+            MessageBuilder.welcome_message(user_name),
+            reply_markup=KeyboardBuilder.main_menu(),
+            parse_mode='Markdown'
+        )
     
     async def _show_main_settings(self, query, user_id: int) -> None:
         """Show main settings menu with city and timezone"""

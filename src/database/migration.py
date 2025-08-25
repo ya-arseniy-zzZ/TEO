@@ -122,6 +122,10 @@ class DataMigration:
             # Add google_sheets_url column to users table if it doesn't exist
             self.db.add_column_if_not_exists('users', 'google_sheets_url', 'TEXT')
             
+            # Add single message interface columns
+            self.db.add_column_if_not_exists('users', 'main_message_id', 'INTEGER')
+            self.db.add_column_if_not_exists('users', 'current_state', 'TEXT')
+            
             logger.info("Schema migration completed successfully")
             
         except Exception as e:

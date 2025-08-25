@@ -563,3 +563,74 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error adding column {column} to table {table}: {e}")
             return False
+    
+    # Single Message Interface methods
+    def save_user_main_message(self, user_id: int, message_id: int) -> bool:
+        """Save user's main message ID"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO users (user_id, main_message_id, updated_at) 
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                """, (user_id, message_id))
+                return True
+        except Exception as e:
+            logger.error(f"Error saving main message for user {user_id}: {e}")
+            return False
+    
+    def get_user_main_message_id(self, user_id: int) -> Optional[int]:
+        """Get user's main message ID"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT main_message_id FROM users WHERE user_id = ?
+                """, (user_id,))
+                row = cursor.fetchone()
+                return row[0] if row and row[0] else None
+        except Exception as e:
+            logger.error(f"Error getting main message for user {user_id}: {e}")
+            return None
+    
+    def set_user_state(self, user_id: int, state: str) -> bool:
+        """Set user's current state"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO users (user_id, current_state, updated_at) 
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                """, (user_id, state))
+                return True
+        except Exception as e:
+            logger.error(f"Error setting state for user {user_id}: {e}")
+            return False
+    
+    def get_user_state(self, user_id: int) -> Optional[str]:
+        """Get user's current state"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT current_state FROM users WHERE user_id = ?
+                """, (user_id,))
+                row = cursor.fetchone()
+                return row[0] if row and row[0] else None
+        except Exception as e:
+            logger.error(f"Error getting state for user {user_id}: {e}")
+            return None
+    
+    def clear_user_state(self, user_id: int) -> bool:
+        """Clear user's current state"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users SET current_state = NULL, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                """, (user_id,))
+                return True
+        except Exception as e:
+            logger.error(f"Error clearing state for user {user_id}: {e}")
+            return False
