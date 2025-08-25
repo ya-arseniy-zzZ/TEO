@@ -25,13 +25,13 @@ class FinanceInterface:
             await query.edit_message_caption(
                 caption=text,
                 reply_markup=reply_markup,
-                parse_mode=parse_mode
+                parse_mode='Markdown'
             )
         else:
-            await FinanceInterface._edit_message_safely(query, 
+            await query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup,
-                parse_mode=parse_mode
+                parse_mode='Markdown'
             )
     
     @staticmethod
