@@ -111,6 +111,17 @@ class KeyboardBuilder:
         return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
+    def finance_connect_menu() -> InlineKeyboardMarkup:
+        """Create finance connect menu keyboard"""
+        keyboard = [
+            [InlineKeyboardButton("🔗 Подключить таблицу", callback_data='finance_connect')],
+            [InlineKeyboardButton("📋 Требования к формату", callback_data='finance_format_requirements')],
+            [InlineKeyboardButton("🎮 Демо-режим", callback_data='finance_demo')],
+            [InlineKeyboardButton("🔙 Назад", callback_data='main_menu')]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+    
+    @staticmethod
     def finance_settings() -> InlineKeyboardMarkup:
         """Create finance settings keyboard"""
         keyboard = [

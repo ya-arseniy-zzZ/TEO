@@ -133,3 +133,4 @@ log "Для остановки бота: ssh root@$SERVER_IP 'systemctl stop teo
 log "Для запуска бота: ssh root@$SERVER_IP 'systemctl start teo-bot.service'"
 
 
+

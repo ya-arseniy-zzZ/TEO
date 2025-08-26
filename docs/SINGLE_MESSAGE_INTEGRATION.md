@@ -217,3 +217,4 @@ sqlite3 data/teo_bot.db ".schema users"
 ```
 
 
+

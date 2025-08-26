@@ -162,18 +162,18 @@ class SingleMessageBot:
     async def _show_finance_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_id: int) -> None:
         """Show finance menu"""
         user_id = update.effective_user.id
-        sheet_url = self.db.get_finance_settings(user_id)
+        finance_settings = self.db.get_finance_settings(user_id)
         
-        if sheet_url:
-            text = "💰 **Финансы**\n\nТаблица настроена. Выберите действие:"
+        if finance_settings:
+            text = "💰 **Финансы**\n\n✅ Таблица подключена\n\nВыберите период для анализа:"
         else:
-            text = "💰 **Финансы**\n\n❌ Таблица не настроена\n\nСначала настройте Google таблицу."
+            text = "💰 **Финансы**\n\nЗдесь мы проанализируем твои расходы и доходы из Google Таблицы: динамика, категории, бюджеты, предиктивные инсайты.\n\n📋 Подключи таблицу в 2 шага: дай ссылку и выбери лист."
         
         await context.bot.edit_message_text(
             chat_id=update.effective_chat.id,
             message_id=message_id,
             text=text,
-            reply_markup=KeyboardBuilder.finance_menu(),
+            reply_markup=KeyboardBuilder.finance_connect_menu() if not finance_settings else KeyboardBuilder.finance_menu(),
             parse_mode='Markdown'
         )
     
@@ -202,30 +202,20 @@ class SingleMessageBot:
         user_id = update.effective_user.id
         main_message_id = self.db.get_user_main_message_id(user_id)
         
-        # Show processing message
-        await context.bot.edit_message_text(
-            chat_id=update.effective_chat.id,
-            message_id=main_message_id,
-            text="⏳ Обрабатываю ссылку на таблицу...",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Отмена", callback_data='finance_menu')]
-            ])
-        )
-        
-        # Process URL (implement your logic here)
-        # ...
-        
-        # Show result
-        await context.bot.edit_message_text(
-            chat_id=update.effective_chat.id,
-            message_id=main_message_id,
-            text="✅ Таблица успешно настроена!",
-            reply_markup=KeyboardBuilder.finance_menu(),
-            parse_mode='Markdown'
-        )
-        
-        # Clear state
-        self.db.clear_user_state(user_id)
+        try:
+            # Use the same logic as in FinanceInterface
+            from src.interfaces.finance_interface import FinanceInterface
+            await FinanceInterface.handle_sheet_url_input(update, context)
+        except Exception as e:
+            logger.error(f"Error handling finance URL: {e}")
+            await context.bot.edit_message_text(
+                chat_id=update.effective_chat.id,
+                message_id=main_message_id,
+                text="❌ Произошла ошибка при обработке ссылки на таблицу.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
+                ])
+            )
     
     async def _handle_city_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, city: str) -> None:
         """Handle city input"""

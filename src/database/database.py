@@ -52,8 +52,62 @@ class DatabaseManager:
                     first_name TEXT,
                     language_code TEXT DEFAULT 'ru',
                     is_active BOOLEAN DEFAULT 1,
+                    google_sheets_url TEXT,
+                    finance_sheet_name TEXT DEFAULT 'Sheet1',
+                    main_message_id INTEGER,
+                    current_state TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Add finance_sheet_name column if it doesn't exist
+            self.add_column_if_not_exists('users', 'finance_sheet_name', 'TEXT DEFAULT "Sheet1"')
+            self.add_column_if_not_exists('users', 'google_sheets_url', 'TEXT')
+            self.add_column_if_not_exists('users', 'main_message_id', 'INTEGER')
+            self.add_column_if_not_exists('users', 'current_state', 'TEXT')
+            self.add_column_if_not_exists('users', 'data_count', 'INTEGER DEFAULT 0')
+            
+            # User budgets table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_budgets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    category TEXT NOT NULL,
+                    budget_limit REAL NOT NULL,
+                    current_spent REAL DEFAULT 0,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Finance auto refresh settings
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS finance_auto_refresh (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER UNIQUE NOT NULL,
+                    enabled BOOLEAN DEFAULT 0,
+                    frequency TEXT DEFAULT 'daily',
+                    last_refresh TIMESTAMP,
+                    next_refresh TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Category mapping rules
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS category_mappings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    original_category TEXT NOT NULL,
+                    mapped_category TEXT NOT NULL,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
                 )
             """)
             
@@ -514,29 +568,34 @@ class DatabaseManager:
             return False
     
     # Finance settings operations
-    def get_finance_settings(self, user_id: int) -> Optional[str]:
-        """Get Google Sheets URL for user's finance tracking"""
+    def get_finance_settings(self, user_id: int) -> Optional[Dict[str, str]]:
+        """Get Google Sheets URL and sheet name for user's finance tracking"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT google_sheets_url FROM users WHERE user_id = ?
+                    SELECT google_sheets_url, finance_sheet_name FROM users WHERE user_id = ?
                 """, (user_id,))
                 row = cursor.fetchone()
-                return row[0] if row and row[0] else None
+                if row and row[0]:
+                    return {
+                        'url': row[0],
+                        'sheet_name': row[1] if row[1] else 'Sheet1'
+                    }
+                return None
         except Exception as e:
             logger.error(f"Error getting finance settings for user {user_id}: {e}")
             return None
     
-    def update_finance_settings(self, user_id: int, google_sheets_url: str = None) -> bool:
-        """Update Google Sheets URL for user's finance tracking"""
+    def update_finance_settings(self, user_id: int, google_sheets_url: str = None, sheet_name: str = 'Sheet1') -> bool:
+        """Update Google Sheets URL and sheet name for user's finance tracking"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    UPDATE users SET google_sheets_url = ?, updated_at = CURRENT_TIMESTAMP
+                    UPDATE users SET google_sheets_url = ?, finance_sheet_name = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
-                """, (google_sheets_url, user_id))
+                """, (google_sheets_url, sheet_name, user_id))
                 return cursor.rowcount > 0
         except Exception as e:
             logger.error(f"Error updating finance settings for user {user_id}: {e}")
@@ -633,4 +692,150 @@ class DatabaseManager:
                 return True
         except Exception as e:
             logger.error(f"Error clearing state for user {user_id}: {e}")
+            return False
+    
+    def get_user_budgets(self, user_id: int) -> List[Dict[str, Any]]:
+        """Get user's budgets with current spending"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT category, budget_limit, current_spent, created_at, updated_at
+                    FROM user_budgets 
+                    WHERE user_id = ? AND is_active = 1
+                    ORDER BY created_at DESC
+                """, (user_id,))
+                
+                budgets = []
+                for row in cursor.fetchall():
+                    budgets.append({
+                        'category': row[0],
+                        'limit': row[1],
+                        'spent': row[2],
+                        'created_at': row[3],
+                        'updated_at': row[4]
+                    })
+                
+                return budgets
+        except Exception as e:
+            logger.error(f"Error getting budgets for user {user_id}: {e}")
+            return []
+    
+    def add_user_budget(self, user_id: int, category: str, budget_limit: float) -> bool:
+        """Add new budget for user"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO user_budgets (user_id, category, budget_limit, current_spent, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, 0, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, (user_id, category, budget_limit))
+                return True
+        except Exception as e:
+            logger.error(f"Error adding budget for user {user_id}: {e}")
+            return False
+    
+    def update_budget_spending(self, user_id: int, category: str, amount: float) -> bool:
+        """Update current spending for a budget"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE user_budgets 
+                    SET current_spent = current_spent + ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND category = ? AND is_active = 1
+                """, (amount, user_id, category))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error updating budget spending for user {user_id}: {e}")
+            return False
+    
+    def reset_budgets_monthly(self, user_id: int) -> bool:
+        """Reset all budgets for new month"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE user_budgets 
+                    SET current_spent = 0, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND is_active = 1
+                """, (user_id,))
+                return True
+        except Exception as e:
+            logger.error(f"Error resetting budgets for user {user_id}: {e}")
+            return False
+    
+    def get_user_data_count(self, user_id: int) -> int:
+        """Get user's data count for comparison"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT data_count FROM users WHERE user_id = ?
+                """, (user_id,))
+                row = cursor.fetchone()
+                return row[0] if row and row[0] else 0
+        except Exception as e:
+            logger.error(f"Error getting data count for user {user_id}: {e}")
+            return 0
+    
+    def update_user_data_count(self, user_id: int, count: int) -> bool:
+        """Update user's data count"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users SET data_count = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                """, (count, user_id))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error updating data count for user {user_id}: {e}")
+            return False
+    
+    def get_auto_refresh_settings(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """Get user's auto refresh settings"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT enabled, frequency, last_refresh, next_refresh
+                    FROM finance_auto_refresh 
+                    WHERE user_id = ?
+                """, (user_id,))
+                row = cursor.fetchone()
+                
+                if row:
+                    return {
+                        'enabled': bool(row[0]),
+                        'frequency': row[1],
+                        'last_refresh': row[2],
+                        'next_refresh': row[3]
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Error getting auto refresh settings for user {user_id}: {e}")
+            return None
+    
+    def set_auto_refresh_settings(self, user_id: int, enabled: bool, frequency: str = None) -> bool:
+        """Set user's auto refresh settings"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                if enabled:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO finance_auto_refresh 
+                        (user_id, enabled, frequency, last_refresh, next_refresh, created_at, updated_at)
+                        VALUES (?, 1, ?, CURRENT_TIMESTAMP, 
+                                datetime('now', '+1 hour'), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """, (user_id, frequency))
+                else:
+                    cursor.execute("""
+                        UPDATE finance_auto_refresh 
+                        SET enabled = 0, updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = ?
+                    """, (user_id,))
+                return True
+        except Exception as e:
+            logger.error(f"Error setting auto refresh for user {user_id}: {e}")
             return False

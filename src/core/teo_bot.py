@@ -309,14 +309,37 @@ class TeoBot:
                         message_id=main_message_id,
                         text="❌ Произошла ошибка при обработке ссылки на таблицу.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
                         ])
                     )
                 else:
                     await update.message.reply_text(
                         "❌ Произошла ошибка при обработке ссылки на таблицу.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
+                        ])
+                    )
+        
+        elif context_state == 'waiting_for_finance_search':
+            logger.info(f"Processing finance search query: {message_text}")
+            try:
+                await FinanceInterface.handle_search_query(update, context, message_text)
+            except Exception as e:
+                logger.error(f"Error in finance search query handler: {e}")
+                if main_message_id:
+                    await context.bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=main_message_id,
+                        text="❌ Произошла ошибка при поиске операций.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_search')]
+                        ])
+                    )
+                else:
+                    await update.message.reply_text(
+                        "❌ Произошла ошибка при поиске операций.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_search')]
                         ])
                     )
         else:
@@ -607,17 +630,90 @@ class TeoBot:
                     ])
                 )
         
-        elif query.data == 'finance_set_url':
-            logger.info(f"Finance set URL callback triggered for user {query.from_user.id}")
+        elif query.data == 'finance_connect':
+            logger.info(f"Finance connect callback triggered for user {query.from_user.id}")
             try:
-                await FinanceInterface.handle_set_sheet_url(update, context)
-                logger.info(f"Finance set URL handler completed successfully")
+                await FinanceInterface.handle_connect_table(update, context)
+                logger.info(f"Finance connect handler completed successfully")
             except Exception as e:
-                logger.error(f"Error in finance_set_url handler: {e}")
+                logger.error(f"Error in finance_connect handler: {e}")
                 await query.edit_message_text(
-                    "❌ Произошла ошибка при настройке URL.",
+                    "❌ Произошла ошибка при подключении таблицы.",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_settings')]
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_format_requirements':
+            try:
+                await FinanceInterface.handle_format_requirements(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_format_requirements handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при показе требований к формату.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_show_template':
+            try:
+                await FinanceInterface.handle_show_template(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_show_template handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при показе шаблона.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_format_requirements')]
+                    ])
+                )
+        
+        elif query.data == 'finance_demo':
+            try:
+                await FinanceInterface.handle_demo_mode(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_demo handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при запуске демо-режима.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_demo_analysis':
+            try:
+                await FinanceInterface.handle_demo_analysis(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_demo_analysis handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при показе демо-анализа.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_demo')]
+                    ])
+                )
+        
+        elif query.data == 'finance_demo_detailed':
+            try:
+                await FinanceInterface.handle_demo_detailed(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_demo_detailed handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при показе детального демо-анализа.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_demo_analysis')]
+                    ])
+                )
+        
+        elif query.data.startswith('finance_select_sheet_'):
+            try:
+                sheet_name = query.data.replace('finance_select_sheet_', '')
+                await FinanceInterface.handle_sheet_selection(update, context, sheet_name)
+            except Exception as e:
+                logger.error(f"Error in finance_select_sheet handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при выборе листа.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_connect')]
                     ])
                 )
         
@@ -645,6 +741,84 @@ class TeoBot:
                     ])
                 )
         
+        elif query.data == 'finance_monthly_analytics':
+            try:
+                await FinanceInterface.handle_monthly_analytics(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_monthly_analytics handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при показе месячной аналитики.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_categories':
+            try:
+                await FinanceInterface.handle_categories_analysis(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_categories handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при анализе категорий.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_trends':
+            try:
+                await FinanceInterface.handle_trends_analysis(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_trends handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при анализе трендов.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_budgets':
+            try:
+                await FinanceInterface.handle_budgets_management(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_budgets handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при управлении бюджетами.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_search':
+            try:
+                await FinanceInterface.handle_search_operations(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_search handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при открытии поиска.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ])
+                )
+        
+        elif query.data == 'finance_refresh':
+            try:
+                await FinanceInterface.handle_refresh_data(update, context)
+            except Exception as e:
+                logger.error(f"Error in finance_refresh handler: {e}")
+                await query.edit_message_text(
+                    "❌ Произошла ошибка при обновлении данных.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ])
+                )
+        
         elif query.data.startswith('finance_'):
             # Handle finance analysis periods
             try:
@@ -659,7 +833,8 @@ class TeoBot:
                 await query.edit_message_text(
                     "❌ Произошла ошибка при анализе финансов.",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
+                        [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
                     ])
                 )
         

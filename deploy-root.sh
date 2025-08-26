@@ -159,3 +159,4 @@ print_status "Для просмотра логов: ssh root@$SERVER_IP 'cd $REM
 print_status "Для остановки: ssh root@$SERVER_IP 'cd $REMOTE_DIR && docker-compose down'"
 
 
+

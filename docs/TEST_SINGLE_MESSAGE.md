@@ -119,3 +119,4 @@ logging.getLogger().setLevel(logging.DEBUG)
 4. **Обратитесь к документации** - `docs/single_message_interface.md`
 
 
+
