@@ -23,6 +23,7 @@ class NotificationScheduler:
         self.notification_callback: Optional[Callable] = None
         self.scheduler_thread = None
         self.running = False
+        self._stop_event = threading.Event()
     
     def set_notification_callback(self, callback: Callable) -> None:
         """Set the callback function for sending notifications"""
@@ -105,7 +106,11 @@ class NotificationScheduler:
         if self.running:
             return
         
+        # Clear any existing schedules
+        schedule.clear()
+        
         self.running = True
+        self._stop_event.clear()
         self.scheduler_thread = threading.Thread(target=self._run_scheduler, daemon=True)
         self.scheduler_thread.start()
         logger.info("Notification scheduler started")
@@ -113,6 +118,7 @@ class NotificationScheduler:
     def stop_scheduler(self) -> None:
         """Stop the scheduler"""
         self.running = False
+        self._stop_event.set()
         if self.scheduler_thread:
             self.scheduler_thread.join(timeout=5)
         logger.info("Notification scheduler stopped")
@@ -120,9 +126,14 @@ class NotificationScheduler:
     def _run_scheduler(self) -> None:
         """Run the scheduler in a separate thread"""
         while self.running:
-            schedule.run_pending()
-            # Check every minute
-            threading.Event().wait(60)
+            try:
+                schedule.run_pending()
+                # Check every minute
+                self._stop_event.wait(60)
+            except Exception as e:
+                logger.error(f"Error in scheduler loop: {e}")
+                # Wait a bit before retrying
+                self._stop_event.wait(10)
     
     def get_user_schedule(self, user_id: int) -> Optional[Dict]:
         """Get schedule information for a user"""
@@ -134,5 +145,20 @@ class NotificationScheduler:
             user_id: data['time'] 
             for user_id, data in self.user_schedules.items()
         }
+    
+    def debug_scheduler_status(self) -> str:
+        """Get debug information about scheduler status"""
+        scheduled_users = self.list_scheduled_users()
+        jobs = schedule.get_jobs()
+        
+        debug_info = f"""
+Scheduler Status:
+- Running: {self.running}
+- Total scheduled users: {len(scheduled_users)}
+- Total jobs: {len(jobs)}
+- Scheduled users: {scheduled_users}
+- Jobs: {[f'{job.job_func.__name__} at {job.at_time}' for job in jobs]}
+"""
+        return debug_info
 
 

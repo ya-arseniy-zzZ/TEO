@@ -303,20 +303,24 @@ class TeoBot:
                 await FinanceInterface.handle_sheet_url_input(update, context)
             except Exception as e:
                 logger.error(f"Error in finance sheet URL input handler: {e}")
+                # Always use main message for error display
                 if main_message_id:
                     await context.bot.edit_message_text(
                         chat_id=update.effective_chat.id,
                         message_id=main_message_id,
-                        text="❌ Произошла ошибка при обработке ссылки на таблицу.",
+                        text="❌ Произошла ошибка при обработке ссылки на таблицу.\n\nПопробуйте еще раз или вернитесь в главное меню.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
-                        ])
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                        ]),
+                        parse_mode='Markdown'
                     )
                 else:
                     await update.message.reply_text(
-                        "❌ Произошла ошибка при обработке ссылки на таблицу.",
+                        "❌ Произошла ошибка при обработке ссылки на таблицу.\n\nПопробуйте еще раз или вернитесь в главное меню.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')]
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_menu')],
+                            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
                         ])
                     )
         
@@ -326,20 +330,24 @@ class TeoBot:
                 await FinanceInterface.handle_search_query(update, context, message_text)
             except Exception as e:
                 logger.error(f"Error in finance search query handler: {e}")
+                # Always use main message for error display
                 if main_message_id:
                     await context.bot.edit_message_text(
                         chat_id=update.effective_chat.id,
                         message_id=main_message_id,
-                        text="❌ Произошла ошибка при поиске операций.",
+                        text="❌ Произошла ошибка при поиске операций.\n\nПопробуйте еще раз или вернитесь в главное меню.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_search')]
-                        ])
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_search')],
+                            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                        ]),
+                        parse_mode='Markdown'
                     )
                 else:
                     await update.message.reply_text(
-                        "❌ Произошла ошибка при поиске операций.",
+                        "❌ Произошла ошибка при поиске операций.\n\nПопробуйте еще раз или вернитесь в главное меню.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_search')]
+                            [InlineKeyboardButton("🔙 Назад", callback_data='finance_search')],
+                            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
                         ])
                     )
         else:
@@ -349,13 +357,15 @@ class TeoBot:
                 await context.bot.edit_message_text(
                     chat_id=update.effective_chat.id,
                     message_id=main_message_id,
-                    text="❓ Неизвестная команда\n\nИспользуйте кнопки для навигации.",
-                    reply_markup=KeyboardBuilder.back_to_main(),
+                    text="❓ Я не ожидаю ввода текста\n\nИспользуйте кнопки для навигации по функциям бота.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                    ]),
                     parse_mode='Markdown'
                 )
             else:
                 await update.message.reply_text(
-                    "Используй команды или кнопки для взаимодействия с ботом. Напиши /help для получения помощи.",
+                    "❓ Я не ожидаю ввода текста\n\nИспользуйте кнопки для навигации по функциям бота.",
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
                     ])
@@ -1092,10 +1102,20 @@ class TeoBot:
         
         # News handlers
         elif query.data == 'news_menu':
+            # Show loading message
+            try:
+                await query.edit_message_text("📰 Загружаю новости...", parse_mode='HTML')
+            except:
+                pass  # Ignore errors if message is already text
             await self._show_news_menu(query)
         
         elif query.data.startswith('news_category_'):
             category = query.data.split('news_category_')[1]
+            # Show loading message
+            try:
+                await query.edit_message_text("📰 Загружаю новости...", parse_mode='HTML')
+            except:
+                pass  # Ignore errors if message is already text
             await self._show_news_category(query, category, 0)
         
         elif query.data.startswith('news_page_'):
@@ -1104,6 +1124,12 @@ class TeoBot:
             if len(parts) >= 4:
                 category = parts[2]
                 page = int(parts[3])
+                
+                # Show loading message
+                try:
+                    await query.edit_message_text("📰 Загружаю новости...", parse_mode='HTML')
+                except:
+                    pass  # Ignore errors if message is already text
                 
                 # Special handling for latest news (main menu)
                 if category == 'latest':
@@ -1120,9 +1146,19 @@ class TeoBot:
                 page = int(parts[3])
                 article_index = int(parts[4])
                 logger.info(f"Processing news details: category={category}, page={page}, article_index={article_index}")
+                
+                # Show loading message
+                try:
+                    await query.edit_message_text("📰 Загружаю статью...", parse_mode='HTML')
+                except:
+                    pass  # Ignore errors if message is already text
                 await self._show_news_details(query, category, page, article_index)
             else:
                 logger.error(f"Invalid news_details format: {query.data}")
+        
+        elif query.data == 'no_action':
+            # Do nothing for non-active buttons
+            await query.answer()
     
     async def send_rain_alert(self, user_id: int, message: str) -> None:
         """Send rain alert to a user"""
@@ -2259,15 +2295,15 @@ class TeoBot:
         news_section = ""
         if latest_news.get('articles'):
             news_section = "⚡ <b>Последние новости</b>⚡\n\n"
-            for i, article in enumerate(latest_news['articles'][:5], 1):
+            for i, article in enumerate(latest_news['articles'][:3], 1):
                 title = article.get('title', '')
                 time = article.get('time', '')
                 if title:
                     news_section += f"<blockquote>{i}. {title} • {time}</blockquote>\n"
                     # Add separator between news (except for the last article)
-                    if i < min(5, len(latest_news['articles'])):
+                    if i < min(3, len(latest_news['articles'])):
                         news_section += "───────────────\n"
-            news_section += "💡 <i>Ты можете ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или выбрать интересующую категорию.</i>"
+            news_section += "\n💡 <i>Подробнее:</i>"
         
         message = f"""{news_section}"""
         
@@ -2321,7 +2357,7 @@ class TeoBot:
         news_section = ""
         if latest_news.get('articles'):
             # Calculate articles for current page
-            articles_per_page = 5
+            articles_per_page = 3
             start_idx = page * articles_per_page
             end_idx = start_idx + articles_per_page
             page_articles = latest_news['articles'][start_idx:end_idx]
@@ -2335,7 +2371,7 @@ class TeoBot:
                     # Add separator between news (except for the last article)
                     if i < start_idx + len(page_articles):
                         news_section += "───────────────\n"
-            news_section += "💡 <i>Ты можешь ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или выбрать интересующую категорию.</i>"
+            news_section += "\n💡 <i>Подробнее:</i>"
         
         message = f"""{news_section}"""
         
@@ -2398,7 +2434,7 @@ class TeoBot:
             news_section = f"⚡ <b>{category_name}</b>⚡\n\n"
             
             # Show articles for current page
-            articles_per_page = 5
+            articles_per_page = 3
             start_idx = page * articles_per_page
             end_idx = start_idx + articles_per_page
             page_articles = news_data['articles'][start_idx:end_idx]
@@ -2415,9 +2451,9 @@ class TeoBot:
             # Add description
             total_pages = NewsInterface.get_page_count(len(news_data['articles']))
             if total_pages > 1:
-                news_section += f"💡 <i>Ты можешь ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5, или перейти на другую страницу. Страница {page + 1} из {total_pages}.</i>"
+                news_section += f"\n💡 <i>Подробнее: Страница {page + 1} из {total_pages}</i>"
             else:
-                news_section += "💡 <i>Ты можешь ознакомиться с новостями подробнее, воспользовавшись кнопками 1-5.</i>"
+                news_section += "\n💡 <i>Подробнее:</i>"
         
         message = f"""{news_section}"""
         

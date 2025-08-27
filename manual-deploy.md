@@ -183,3 +183,8 @@ docker-compose exec teo-bot ls -la
 
 
 
+
+
+
+
+

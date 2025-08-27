@@ -133,3 +133,8 @@ log "Обновление завершено!"
 log "Для просмотра логов: ssh root@$SERVER_IP 'cd /root/teo-bot && docker-compose logs -f'"
 log "Для проверки статуса: ssh root@$SERVER_IP 'systemctl status teo-bot.service'"
 
+
+
+
+
+

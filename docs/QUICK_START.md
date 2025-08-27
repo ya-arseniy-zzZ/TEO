@@ -10,13 +10,15 @@
 
 ### Установка CLI (опционально)
 ```bash
-curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-exec -l $SHELL
+# Установите CLI для вашего облачного провайдера
+# Например, для AWS: aws configure
+# Для Google Cloud: gcloud auth login
+# Для Azure: az login
 ```
 
 ### Авторизация
 ```bash
-yc init
+# Авторизуйтесь в вашем облачном провайдере
 ```
 
 ### Создание SSH ключей (если нет)
@@ -70,7 +72,9 @@ nano .env
 ### Просмотр логов
 ```bash
 # Получить IP инстанса
-yc compute instance get [имя-инстанса] --format=json | jq -r '.network_interfaces[0].primary_v4_address.address'
+# Используйте команды вашего облачного провайдера
+# Например, для AWS: aws ec2 describe-instances --instance-ids [instance-id]
+# Для Google Cloud: gcloud compute instances describe [имя-инстанса]
 
 # Подключиться и посмотреть логи
 ssh ubuntu@[IP-АДРЕС] 'docker-compose logs -f'
@@ -93,29 +97,29 @@ ssh ubuntu@[IP-АДРЕС] 'docker-compose logs -f'
 3. Посмотрите логи: `ssh ubuntu@[IP] 'docker-compose logs'`
 
 ### Ошибки деплоя
-1. Проверьте авторизацию: `yc config list`
+1. Проверьте авторизацию в вашем облачном провайдере
 2. Проверьте SSH ключи: `ls -la ~/.ssh/id_rsa.pub`
 3. Проверьте баланс в вашем облачном аккаунте
 
 ### Обновление не работает
-1. Остановите инстанс: `yc compute instance stop [имя-инстанса]`
-2. Запустите заново: `yc compute instance start [имя-инстанса]`
+1. Остановите инстанс используя команды вашего облачного провайдера
+2. Запустите заново используя команды вашего облачного провайдера
 3. Повторите деплой: `./deploy.sh [имя-инстанса]`
 
 ## Полезные команды
 
 ```bash
 # Остановить инстанс
-yc compute instance stop [имя-инстанса]
+# Используйте команды вашего облачного провайдера
 
 # Запустить инстанс
-yc compute instance start [имя-инстанса]
+# Используйте команды вашего облачного провайдера
 
 # Удалить инстанс (осторожно!)
-yc compute instance delete [имя-инстанса]
+# Используйте команды вашего облачного провайдера
 
 # Посмотреть все инстансы
-yc compute instance list
+# Используйте команды вашего облачного провайдера
 ```
 
 ## Поддержка

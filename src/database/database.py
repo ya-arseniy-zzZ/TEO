@@ -694,6 +694,97 @@ class DatabaseManager:
             logger.error(f"Error clearing state for user {user_id}: {e}")
             return False
     
+    # Anchor-UX methods
+    def save_anchor_session(self, user_id: int, chat_id: int, session_data: Dict[str, Any]) -> bool:
+        """Save Anchor-UX session data"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Create anchor_sessions table if it doesn't exist
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS anchor_sessions (
+                        user_id INTEGER,
+                        chat_id INTEGER,
+                        session_data TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (user_id, chat_id)
+                    )
+                """)
+                
+                import json
+                session_json = json.dumps(session_data, ensure_ascii=False)
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO anchor_sessions (user_id, chat_id, session_data, updated_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, (user_id, chat_id, session_json))
+                
+                return True
+        except Exception as e:
+            logger.error(f"Error saving anchor session for user {user_id}: {e}")
+            return False
+    
+    def get_anchor_session(self, user_id: int, chat_id: int) -> Optional[Dict[str, Any]]:
+        """Get Anchor-UX session data"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Create anchor_sessions table if it doesn't exist
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS anchor_sessions (
+                        user_id INTEGER,
+                        chat_id INTEGER,
+                        session_data TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (user_id, chat_id)
+                    )
+                """)
+                
+                cursor.execute("""
+                    SELECT session_data FROM anchor_sessions WHERE user_id = ? AND chat_id = ?
+                """, (user_id, chat_id))
+                
+                row = cursor.fetchone()
+                if row and row[0]:
+                    import json
+                    return json.loads(row[0])
+                return None
+        except Exception as e:
+            logger.error(f"Error getting anchor session for user {user_id}: {e}")
+            return None
+    
+    def clear_anchor_session(self, user_id: int, chat_id: int) -> bool:
+        """Clear Anchor-UX session data"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    DELETE FROM anchor_sessions WHERE user_id = ? AND chat_id = ?
+                """, (user_id, chat_id))
+                return True
+        except Exception as e:
+            logger.error(f"Error clearing anchor session for user {user_id}: {e}")
+            return False
+    
+    def cleanup_expired_anchor_sessions(self, max_age_hours: int = 24) -> int:
+        """Clean up expired anchor sessions"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    DELETE FROM anchor_sessions 
+                    WHERE updated_at < datetime('now', '-{} hours')
+                """.format(max_age_hours))
+                
+                deleted_count = cursor.rowcount
+                logger.info(f"Cleaned up {deleted_count} expired anchor sessions")
+                return deleted_count
+        except Exception as e:
+            logger.error(f"Error cleaning up expired anchor sessions: {e}")
+            return 0
+    
     def get_user_budgets(self, user_id: int) -> List[Dict[str, Any]]:
         """Get user's budgets with current spending"""
         try:

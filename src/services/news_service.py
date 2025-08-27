@@ -156,7 +156,7 @@ class NewsService:
             'total_results': len(formatted_articles)
         }
     
-    def format_news_message(self, news_data: Dict, page: int = 0, articles_per_page: int = 5) -> str:
+    def format_news_message(self, news_data: Dict, page: int = 0, articles_per_page: int = 3) -> str:
         """
         Format news data into a readable message
         

@@ -134,3 +134,7 @@ log "Для запуска бота: ssh root@$SERVER_IP 'systemctl start teo-bo
 
 
 
+
+
+
+

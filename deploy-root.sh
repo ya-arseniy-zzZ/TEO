@@ -160,3 +160,8 @@ print_status "Для остановки: ssh root@$SERVER_IP 'cd $REMOTE_DIR && 
 
 
 
+
+
+
+
+

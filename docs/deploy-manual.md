@@ -4,13 +4,15 @@
 
 ### 1. Установка CLI (опционально)
 ```bash
-curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-exec -l $SHELL
+# Установите CLI для вашего облачного провайдера
+# Например, для AWS: aws configure
+# Для Google Cloud: gcloud auth login
+# Для Azure: az login
 ```
 
 ### 2. Авторизация в облаке
 ```bash
-yc init
+# Авторизуйтесь в вашем облачном провайдере
 ```
 
 ### 3. Создание SSH ключей (если нет)
@@ -31,22 +33,31 @@ chmod +x deploy.sh
 ### 1. Создание Compute Instance
 
 ```bash
-# Создаем инстанс
-yc compute instance create \
-    --name teo-bot-instance \
-    --zone ru-central1-a \
-    --platform standard-v2 \
-    --cores 2 \
-    --memory 4GB \
-    --network-interface subnet-name=default-ru-central1-a,ipv4-address=auto,nat-ip-version=ipv4 \
-    --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2004-lts,size=20GB \
-    --metadata serial-port-enable=0 \
-    --metadata ssh-keys="ubuntu:$(cat ~/.ssh/id_rsa.pub)"
+# Создаем инстанс используя команды вашего облачного провайдера
+# Пример для AWS:
+# aws ec2 run-instances \
+#     --image-id ami-0c02fb55956c7d316 \
+#     --count 1 \
+#     --instance-type t3.medium \
+#     --key-name your-key-name \
+#     --security-group-ids sg-xxxxxxxxx
+
+# Пример для Google Cloud:
+# gcloud compute instances create teo-bot-instance \
+#     --zone=us-central1-a \
+#     --machine-type=e2-medium \
+#     --image-family=ubuntu-2004-lts \
+#     --image-project=ubuntu-os-cloud
 ```
 
 ### 2. Получение IP адреса
 ```bash
-yc compute instance get teo-bot-instance --format=json | jq -r '.network_interfaces[0].primary_v4_address.address'
+# Используйте команды вашего облачного провайдера
+# Пример для AWS:
+# aws ec2 describe-instances --instance-ids i-xxxxxxxxx --query 'Reservations[0].Instances[0].PublicIpAddress' --output text
+
+# Пример для Google Cloud:
+# gcloud compute instances describe teo-bot-instance --zone=us-central1-a --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
 ```
 
 ### 3. Подключение к инстансу

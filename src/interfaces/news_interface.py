@@ -46,38 +46,41 @@ class NewsInterface:
         """Create news main menu with specific buttons as requested"""
         keyboard = []
         
-        # Numbered buttons for latest news (1-5 for first page)
+        # Numbered buttons for latest news (1-3) with navigation buttons in the same row
         article_buttons = []
-        start_article = page * 5 + 1  # Calculate starting article number for this page
-        for i in range(5):  # 5 articles per page
+        start_article = page * 3 + 1  # Calculate starting article number for this page
+        
+        # Add back button first if not on first page
+        if page > 0:
+            article_buttons.append(InlineKeyboardButton("⬅️", callback_data=f'news_page_latest_{page - 1}'))
+        
+        # Add numbered buttons
+        for i in range(3):  # 3 articles per page
             article_number = start_article + i
             article_buttons.append(InlineKeyboardButton(str(article_number), callback_data=f'news_details_latest_{page}_{article_number}'))
+        
+        # Add next button if not on last page
+        if page < total_pages - 1:
+            article_buttons.append(InlineKeyboardButton("➡️", callback_data=f'news_page_latest_{page + 1}'))
+        
         keyboard.append(article_buttons)
         
-        # Update button
-        keyboard.append([InlineKeyboardButton("🔄 Обновить", callback_data='news_category_latest')])
+        # Category label (non-active button)
+        keyboard.append([InlineKeyboardButton("📰 Категории", callback_data='no_action')])
         
-        # Navigation row (Next button for scrolling through news)
-        nav_row = []
-        if page < total_pages - 1:
-            nav_row.append(InlineKeyboardButton("➡️ Далее", callback_data=f'news_page_latest_{page + 1}'))
-        
-        if nav_row:
-            keyboard.append(nav_row)
-        
-        # Category buttons (2 per row)
+        # Category buttons with emoji icons only (compact layout)
         keyboard.append([
-            InlineKeyboardButton("📰 Главные новости", callback_data='news_category_popular'),
-            InlineKeyboardButton("⚽ Спорт", callback_data='news_category_sports')
+            InlineKeyboardButton("🔥", callback_data='news_category_popular'),
+            InlineKeyboardButton("⚽", callback_data='news_category_sports'),
+            InlineKeyboardButton("💰", callback_data='news_category_economy'),
+            InlineKeyboardButton("🤖", callback_data='news_category_technology')
         ])
         
+        # Update and Main menu buttons on the same row
         keyboard.append([
-            InlineKeyboardButton("💰 Экономика и бизнес", callback_data='news_category_economy'),
-            InlineKeyboardButton("🤖 Технологии и наука", callback_data='news_category_technology')
+            InlineKeyboardButton("🔄 Обновить", callback_data='news_category_latest'),
+            InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')
         ])
-        
-        # Main menu button
-        keyboard.append([InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')])
         
         return InlineKeyboardMarkup(keyboard)
     
@@ -96,27 +99,30 @@ class NewsInterface:
         """
         keyboard = []
         
-        # Numbered buttons for articles (adapt to page)
+        # Numbered buttons for articles (adapt to page) with navigation buttons in the same row
         article_buttons = []
-        start_article = page * 5 + 1  # Calculate starting article number for this page
-        for i in range(5):  # 5 articles per page
+        start_article = page * 3 + 1  # Calculate starting article number for this page
+        
+        # Add back button first if not on first page
+        if page > 0:
+            article_buttons.append(InlineKeyboardButton("⬅️", callback_data=f'news_page_{category}_{page - 1}'))
+        
+        # Add numbered buttons
+        for i in range(3):  # 3 articles per page
             article_number = start_article + i
             article_buttons.append(InlineKeyboardButton(str(article_number), callback_data=f'news_details_{category}_{page}_{article_number}'))
+        
+        # Add next button if not on last page
+        if page < total_pages - 1:
+            article_buttons.append(InlineKeyboardButton("➡️", callback_data=f'news_page_{category}_{page + 1}'))
+        
         keyboard.append(article_buttons)
         
-        # Navigation row
-        nav_row = []
-        if page > 0:
-            nav_row.append(InlineKeyboardButton("⬅️ Назад", callback_data=f'news_page_{category}_{page - 1}'))
-        if page < total_pages - 1:
-            nav_row.append(InlineKeyboardButton("➡️ Далее", callback_data=f'news_page_{category}_{page + 1}'))
-        
-        if nav_row:
-            keyboard.append(nav_row)
-        
-        # Action buttons - separate buttons
-        keyboard.append([InlineKeyboardButton("🔄 Обновить", callback_data=f'news_category_{category}')])
-        keyboard.append([InlineKeyboardButton("📰 К меню новостей", callback_data='news_menu')])
+        # Action buttons - compact layout
+        keyboard.append([
+            InlineKeyboardButton("🔄 Обновить", callback_data=f'news_category_{category}'),
+            InlineKeyboardButton("📰 К меню новостей", callback_data='news_menu')
+        ])
         
         # Back button
         keyboard.append([InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')])
@@ -131,7 +137,7 @@ class NewsInterface:
         Args:
             category: News category
             page: Current page number
-            article_index: Article index (1-5)
+            article_index: Article index (1-3)
             
         Returns:
             InlineKeyboardMarkup
@@ -151,6 +157,6 @@ class NewsInterface:
         return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
-    def get_page_count(articles_count: int, articles_per_page: int = 5) -> int:
+    def get_page_count(articles_count: int, articles_per_page: int = 3) -> int:
         """Get total number of pages for articles"""
         return (articles_count + articles_per_page - 1) // articles_per_page
