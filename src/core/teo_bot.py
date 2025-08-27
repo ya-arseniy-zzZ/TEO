@@ -1104,7 +1104,7 @@ class TeoBot:
         elif query.data == 'news_menu':
             # Show loading message
             try:
-                await query.edit_message_text("📰 Загружаю новости...", parse_mode='HTML')
+                await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
             except:
                 pass  # Ignore errors if message is already text
             await self._show_news_menu(query)
@@ -1113,7 +1113,7 @@ class TeoBot:
             category = query.data.split('news_category_')[1]
             # Show loading message
             try:
-                await query.edit_message_text("📰 Загружаю новости...", parse_mode='HTML')
+                await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
             except:
                 pass  # Ignore errors if message is already text
             await self._show_news_category(query, category, 0)
@@ -1127,7 +1127,7 @@ class TeoBot:
                 
                 # Show loading message
                 try:
-                    await query.edit_message_text("📰 Загружаю новости...", parse_mode='HTML')
+                    await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
                 except:
                     pass  # Ignore errors if message is already text
                 
@@ -1149,7 +1149,7 @@ class TeoBot:
                 
                 # Show loading message
                 try:
-                    await query.edit_message_text("📰 Загружаю статью...", parse_mode='HTML')
+                    await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
                 except:
                     pass  # Ignore errors if message is already text
                 await self._show_news_details(query, category, page, article_index)
