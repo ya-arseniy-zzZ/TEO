@@ -1104,7 +1104,10 @@ class TeoBot:
         elif query.data == 'news_menu':
             # Show loading message
             try:
+                logger.info("Showing loading message for news menu")
                 await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
+                import asyncio
+                await asyncio.sleep(0.5)  # Small delay to show loading message
             except:
                 pass  # Ignore errors if message is already text
             await self._show_news_menu(query)
@@ -1114,6 +1117,8 @@ class TeoBot:
             # Show loading message
             try:
                 await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
+                import asyncio
+                await asyncio.sleep(0.5)  # Small delay to show loading message
             except:
                 pass  # Ignore errors if message is already text
             await self._show_news_category(query, category, 0)
@@ -1128,6 +1133,8 @@ class TeoBot:
                 # Show loading message
                 try:
                     await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
+                    import asyncio
+                    await asyncio.sleep(0.5)  # Small delay to show loading message
                 except:
                     pass  # Ignore errors if message is already text
                 
@@ -1150,6 +1157,8 @@ class TeoBot:
                 # Show loading message
                 try:
                     await query.edit_message_text("📰 Загрузка данных...", parse_mode='HTML')
+                    import asyncio
+                    await asyncio.sleep(0.5)  # Small delay to show loading message
                 except:
                     pass  # Ignore errors if message is already text
                 await self._show_news_details(query, category, page, article_index)
