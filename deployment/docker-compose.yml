@@ -2,14 +2,13 @@ version: '3.8'
 
 services:
   teo-bot:
-    build: .
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
     container_name: teo-bot
     restart: unless-stopped
-    environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - WEATHER_API_KEY=${WEATHER_API_KEY}
-      - DEFAULT_CITY=${DEFAULT_CITY}
-      - TIMEZONE=${TIMEZONE}
+    env_file:
+      - ../.env
     volumes:
       - ../data/teo_bot.db:/app/data/teo_bot.db
       - ../data/user_habits.json:/app/data/user_habits.json
