@@ -280,6 +280,7 @@ class TeoBot:
         
         # Check both user_states and context.user_data for state
         user_state = user_states.get(user_id)
+        self_user_state = self.user_states.get(user_id)
         context_state = context.user_data.get('waiting_for')
         
         # Add debug logging
@@ -352,9 +353,9 @@ class TeoBot:
                         ])
                     )
         
-        elif user_state and user_state.get('state') == 'awaiting_news_search':
+        elif (user_state and user_state.get('state') == 'awaiting_news_search') or (self_user_state and self_user_state.get('state') == 'awaiting_news_search'):
             logger.info(f"Processing news search query: {message_text}")
-            logger.info(f"User state: {user_state}")
+            logger.info(f"User state: {user_state}, Self user state: {self_user_state}")
             await self._process_news_search(update, context, message_text, main_message_id)
         else:
             logger.info(f"No active state found, showing help message")
@@ -2628,6 +2629,7 @@ class TeoBot:
         # Set user state to await search query
         user_id = query.from_user.id
         self.user_states[user_id] = {'state': 'awaiting_news_search'}
+        logger.info(f"Set user {user_id} state to awaiting_news_search: {self.user_states[user_id]}")
     
     async def _process_news_search(self, update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, main_message_id: int = None) -> None:
         """Process news search query"""
