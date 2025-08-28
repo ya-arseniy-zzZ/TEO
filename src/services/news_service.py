@@ -148,13 +148,23 @@ class NewsService:
                 'image_url': image_url
             })
         
-        return {
-            'category': category,
-            'category_name': NEWS_CATEGORIES[category]["name"],
-            'category_emoji': NEWS_CATEGORIES[category]["emoji"],
-            'articles': formatted_articles,
-            'total_results': len(formatted_articles)
-        }
+        # Handle search category specially
+        if category == "search":
+            return {
+                'category': category,
+                'category_name': "Поиск",
+                'category_emoji': "🔍",
+                'articles': formatted_articles,
+                'total_results': len(formatted_articles)
+            }
+        else:
+            return {
+                'category': category,
+                'category_name': NEWS_CATEGORIES[category]["name"],
+                'category_emoji': NEWS_CATEGORIES[category]["emoji"],
+                'articles': formatted_articles,
+                'total_results': len(formatted_articles)
+            }
     
     def format_news_message(self, news_data: Dict, page: int = 0, articles_per_page: int = 3) -> str:
         """
