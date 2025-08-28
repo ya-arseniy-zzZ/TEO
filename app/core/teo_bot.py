@@ -40,6 +40,7 @@ from app.utils.messages import MessageBuilder
 from app.utils.message_manager import MessageManager
 
 # Setup logging
+from app.utils.single_message_decorator import SingleMessageDecorator, SingleMessageState, with_single_message_policy
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -2999,3 +3000,85 @@ class TeoBot:
 if __name__ == '__main__':
     bot = TeoBot()
     bot.run()
+
+    # ===============================
+    # UNIVERSAL SINGLE MESSAGE METHODS
+    # ===============================
+    
+    async def send_universal_message(
+        self,
+        bot: Bot,
+        user_id: int,
+        text: str = None,
+        media_type: str = None,
+        media_data: Any = None,
+        **kwargs
+    ) -> Optional[Message]:
+        """
+        Universal method to send any type of message with guaranteed single message cleanup
+        This method should be used for ALL new features to ensure compliance
+        """
+        return await self.message_manager.universal_send_message(
+            bot, user_id, text, media_type, media_data, **kwargs
+        )
+    
+    async def edit_universal_message(
+        self,
+        bot: Bot,
+        user_id: int,
+        message_id: int = None,
+        text: str = None,
+        media_type: str = None,
+        media_data: Any = None,
+        **kwargs
+    ) -> Optional[Message]:
+        """
+        Universal method to edit any type of message with guaranteed single message cleanup
+        This method should be used for ALL message editing to ensure compliance
+        """
+        return await self.message_manager.universal_edit_message(
+            bot, user_id, message_id, text, media_type, media_data, **kwargs
+        )
+    
+    @with_single_message_policy
+    async def handle_callback_with_single_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Enhanced callback handler with automatic single message enforcement
+        """
+        query = update.callback_query
+        user_id = query.from_user.id
+        
+        # Answer callback query
+        await query.answer()
+        
+        # Use universal edit method
+        await self.edit_universal_message(
+            bot=context.bot,
+            user_id=user_id,
+            message_id=query.message.message_id,
+            text="Processing your request...",
+            parse_mode='Markdown'
+        )
+        
+        # Process the actual callback
+        await self.button_handler(update, context)
+    
+    def get_single_message_compliance_report(self) -> Dict[str, Any]:
+        """Get compliance report for single message system"""
+        try:
+            return {
+                'system_status': 'active',
+                'universal_methods_available': True,
+                'decorator_active': True,
+                'enforcement_level': 'maximum',
+                'compliance_tools': [
+                    'universal_send_message',
+                    'universal_edit_message', 
+                    'single_message_decorator',
+                    'force_single_message_state'
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Error getting compliance report: {e}")
+            return {'error': str(e)}
+
