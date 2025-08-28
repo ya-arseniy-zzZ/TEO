@@ -37,6 +37,7 @@ from app.database.database import DatabaseManager
 from app.database.migration import run_migration
 from app.utils.keyboards import KeyboardBuilder
 from app.utils.messages import MessageBuilder
+from app.utils.message_manager import MessageManager
 
 # Setup logging
 logging.basicConfig(
@@ -68,6 +69,7 @@ class TeoBot:
         self.application = None
         self.notification_users: Set[int] = set()
         self.user_states = {}  # Store user states for various operations
+        self.message_manager = MessageManager(db)  # Initialize message manager
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /start command"""
@@ -86,18 +88,24 @@ class TeoBot:
         if weather_settings and weather_settings.get('rain_alerts_enabled'):
             rain_monitor.enable_rain_alerts(user_id, weather_settings)
         
-        # Create main message for single message interface
-        message = await update.message.reply_text(
-            MessageBuilder.welcome_message(user_name),
+        # Create main message for single message interface with cleanup
+        message = await self.message_manager.send_message_with_cleanup(
+            bot=context.bot,
+            user_id=user_id,
+            text=MessageBuilder.welcome_message(user_name),
             reply_markup=KeyboardBuilder.main_menu(),
             parse_mode='Markdown'
         )
         
         # Save main message ID to database
-        db.save_user_main_message(user_id, message.message_id)
+        if message:
+            db.save_user_main_message(user_id, message.message_id)
         
         # Delete the /start command
         await update.message.delete()
+        
+        # Clear any existing bot messages for clean start
+        await self.message_manager.clear_user_messages(context.bot, user_id)
         
         logger.info(f"User {user_id} started bot with main message {message.message_id}")
     
@@ -1114,7 +1122,12 @@ class TeoBot:
             weather_data = weather_service.get_current_weather(city)
             
             test_message = f"🔔 **Тестовое уведомление**\n\n{weather_service.format_weather_message(weather_data)}"
-            await context.bot.send_message(chat_id=user_id, text=test_message, parse_mode='Markdown')
+            await self.message_manager.send_message_with_cleanup(
+                bot=context.bot,
+                user_id=user_id,
+                text=test_message,
+                parse_mode='Markdown'
+            )
             await query.edit_message_text("✅ Тестовое уведомление отправлено!", parse_mode='Markdown')
         
         # News handlers
@@ -1193,8 +1206,9 @@ class TeoBot:
     async def send_rain_alert(self, user_id: int, message: str) -> None:
         """Send rain alert to a user"""
         try:
-            await self.application.bot.send_message(
-                chat_id=user_id,
+            await self.message_manager.send_message_with_cleanup(
+                bot=self.application.bot,
+                user_id=user_id,
                 text=message,
                 parse_mode='Markdown'
             )
@@ -1219,8 +1233,9 @@ class TeoBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            await self.application.bot.send_message(
-                chat_id=habit.user_id,
+            await self.message_manager.send_message_with_cleanup(
+                bot=self.application.bot,
+                user_id=habit.user_id,
                 text=reminder_message,
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
@@ -2275,8 +2290,9 @@ class TeoBot:
             if weather_data:
                 notification_message = f"🌅 **Доброе утро! Вот твоя ежедневная сводка погоды:**\n\n{weather_service.format_weather_message(weather_data)}"
                 
-                await self.application.bot.send_message(
-                    chat_id=user_id,
+                await self.message_manager.send_message_with_cleanup(
+                    bot=self.application.bot,
+                    user_id=user_id,
                     text=notification_message,
                     parse_mode='Markdown'
                 )

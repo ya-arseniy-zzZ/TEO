@@ -68,6 +68,19 @@ class DatabaseManager:
             self.add_column_if_not_exists('users', 'current_state', 'TEXT')
             self.add_column_if_not_exists('users', 'data_count', 'INTEGER DEFAULT 0')
             
+            # Bot messages history table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bot_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    message_id INTEGER NOT NULL,
+                    chat_id INTEGER NOT NULL,
+                    message_type TEXT DEFAULT 'text',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+                )
+            """)
+            
             # User budgets table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS user_budgets (
@@ -929,4 +942,73 @@ class DatabaseManager:
                 return True
         except Exception as e:
             logger.error(f"Error setting auto refresh for user {user_id}: {e}")
+            return False
+    
+    # Bot messages history methods
+    def save_bot_message(self, user_id: int, message_id: int, chat_id: int, message_type: str = 'text') -> bool:
+        """Save bot message to history"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO bot_messages (user_id, message_id, chat_id, message_type, created_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, (user_id, message_id, chat_id, message_type))
+                return True
+        except Exception as e:
+            logger.error(f"Error saving bot message for user {user_id}: {e}")
+            return False
+    
+    def get_user_bot_messages(self, user_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get user's bot messages history"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT message_id, chat_id, message_type, created_at
+                    FROM bot_messages 
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, (user_id, limit))
+                
+                messages = []
+                for row in cursor.fetchall():
+                    messages.append({
+                        'message_id': row[0],
+                        'chat_id': row[1],
+                        'message_type': row[2],
+                        'created_at': row[3]
+                    })
+                return messages
+        except Exception as e:
+            logger.error(f"Error getting bot messages for user {user_id}: {e}")
+            return []
+    
+    def delete_bot_message(self, user_id: int, message_id: int) -> bool:
+        """Delete specific bot message from history"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    DELETE FROM bot_messages 
+                    WHERE user_id = ? AND message_id = ?
+                """, (user_id, message_id))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error deleting bot message for user {user_id}: {e}")
+            return False
+    
+    def clear_user_bot_messages(self, user_id: int) -> bool:
+        """Clear all bot messages for user"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    DELETE FROM bot_messages 
+                    WHERE user_id = ?
+                """, (user_id,))
+                return True
+        except Exception as e:
+            logger.error(f"Error clearing bot messages for user {user_id}: {e}")
             return False
