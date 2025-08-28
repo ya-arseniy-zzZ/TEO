@@ -354,20 +354,31 @@ class TeoBot:
         
         elif user_state and user_state.get('state') == 'awaiting_news_search':
             logger.info(f"Processing news search query: {message_text}")
+            logger.info(f"User state: {user_state}")
             await self._process_news_search(update, context, message_text, main_message_id)
         else:
             logger.info(f"No active state found, showing help message")
             # No active state, show help in main message
             if main_message_id:
-                await context.bot.edit_message_text(
-                    chat_id=update.effective_chat.id,
-                    message_id=main_message_id,
-                    text="❓ Я не ожидаю ввода текста\n\nИспользуйте кнопки для навигации по функциям бота.",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
-                    ]),
-                    parse_mode='Markdown'
-                )
+                try:
+                    await context.bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=main_message_id,
+                        text="❓ Я не ожидаю ввода текста\n\nИспользуйте кнопки для навигации по функциям бота.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                        ]),
+                        parse_mode='Markdown'
+                    )
+                except Exception as e:
+                    logger.error(f"Error editing message: {e}")
+                    # If we can't edit the message (e.g., it has media), send a new one
+                    await update.message.reply_text(
+                        "❓ Я не ожидаю ввода текста\n\nИспользуйте кнопки для навигации по функциям бота.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+                        ])
+                    )
             else:
                 await update.message.reply_text(
                     "❓ Я не ожидаю ввода текста\n\nИспользуйте кнопки для навигации по функциям бота.",
@@ -2621,17 +2632,21 @@ class TeoBot:
     async def _process_news_search(self, update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, main_message_id: int = None) -> None:
         """Process news search query"""
         user_id = update.effective_user.id
+        logger.info(f"Processing news search for user {user_id}, query: '{query}'")
         
         # Clear user state
         if user_id in self.user_states:
             del self.user_states[user_id]
+            logger.info(f"Cleared user state for user {user_id}")
         
         # Get user timezone
         weather_settings = db.get_weather_settings(user_id)
         user_timezone = weather_settings.get('timezone', 'UTC') if weather_settings else 'UTC'
         
         # Search for news
+        logger.info(f"Searching for news with query: '{query}'")
         search_results = news_service.search_news(query, user_timezone)
+        logger.info(f"Search results: {search_results is not None}, articles count: {len(search_results.get('articles', [])) if search_results else 0}")
         
         if not search_results or not search_results.get('articles'):
             message = f"🔍 <b>Поиск: {query}</b>\n\n❌ Новости по вашему запросу не найдены.\n\nПопробуйте другие ключевые слова."
@@ -2681,12 +2696,23 @@ class TeoBot:
         try:
             with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
                 if main_message_id:
-                    await context.bot.edit_message_media(
-                        chat_id=update.effective_chat.id,
-                        message_id=main_message_id,
-                        media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
-                        reply_markup=reply_markup
-                    )
+                    try:
+                        await context.bot.edit_message_media(
+                            chat_id=update.effective_chat.id,
+                            message_id=main_message_id,
+                            media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
+                            reply_markup=reply_markup
+                        )
+                    except Exception as media_error:
+                        logger.error(f"Error editing message media: {media_error}")
+                        # Fallback to text-only edit
+                        await context.bot.edit_message_text(
+                            chat_id=update.effective_chat.id,
+                            message_id=main_message_id,
+                            text=message,
+                            reply_markup=reply_markup,
+                            parse_mode='HTML'
+                        )
                 else:
                     await update.message.reply_photo(
                         photo=photo,
@@ -2698,13 +2724,22 @@ class TeoBot:
             logger.error(f"Error sending news search results with image: {e}")
             # Fallback to text-only
             if main_message_id:
-                await context.bot.edit_message_text(
-                    chat_id=update.effective_chat.id,
-                    message_id=main_message_id,
-                    text=message,
-                    reply_markup=reply_markup,
-                    parse_mode='HTML'
-                )
+                try:
+                    await context.bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=main_message_id,
+                        text=message,
+                        reply_markup=reply_markup,
+                        parse_mode='HTML'
+                    )
+                except Exception as text_error:
+                    logger.error(f"Error editing message text: {text_error}")
+                    # Send new message as last resort
+                    await update.message.reply_text(
+                        message,
+                        reply_markup=reply_markup,
+                        parse_mode='HTML'
+                    )
             else:
                 await update.message.reply_text(
                     message,

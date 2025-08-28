@@ -226,7 +226,7 @@ class NewsService:
             Dictionary with news data or None if error
         """
         try:
-            # Create search URL
+            # Create search URL with sorting by publishedAt (newest first)
             search_url = f"{self.base_url}?language=ru&sortBy=publishedAt&pageSize=15&q={query}&domains=rbc.ru,kommersant.ru,vedomosti.ru,interfax.ru,forbes.ru,tass.ru,lenta.ru&apiKey={self.api_key}"
             
             response = requests.get(search_url, timeout=REQUEST_TIMEOUT)
