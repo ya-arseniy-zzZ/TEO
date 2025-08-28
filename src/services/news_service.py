@@ -25,7 +25,7 @@ NEWS_CATEGORIES = {
     "popular": {
         "name": "Главные новости",
         "emoji": "🔥",
-        "url": f"{NEWS_API_BASE_URL}?language=ru&sortBy=popularity&pageSize=15&searchIn=title,description&q=новости%20OR%20главное%20OR%20итоги&domains=rbc.ru,kommersant.ru,vedomosti.ru,interfax.ru,forbes.ru,tass.ru,lenta.ru&apiKey={NEWS_API_KEY}"
+        "url": f"{NEWS_API_BASE_URL}?language=ru&sortBy=popularity&pageSize=15&searchIn=title,description&q=новости%20OR%20главное%20OR%20итоги&domains=rbc.ru,kommersant.ru,vedomosti.ru,interfax.ru,forbes.ru,tass.ru,lenta.ru&from={datetime.now().strftime('%Y-%m-%d')}&apiKey={NEWS_API_KEY}"
     },
     "sports": {
         "name": "Спорт",
@@ -213,6 +213,46 @@ class NewsService:
     def get_latest_news(self, user_timezone: str = "UTC") -> Optional[Dict]:
         """Get latest news (default category)"""
         return self.get_news("latest", user_timezone)
+    
+    def search_news(self, query: str, user_timezone: str = "UTC") -> Optional[Dict]:
+        """
+        Search news by keywords
+        
+        Args:
+            query: Search query
+            user_timezone: User's timezone for time formatting
+            
+        Returns:
+            Dictionary with news data or None if error
+        """
+        try:
+            # Create search URL
+            search_url = f"{self.base_url}?language=ru&sortBy=publishedAt&pageSize=15&q={query}&domains=rbc.ru,kommersant.ru,vedomosti.ru,interfax.ru,forbes.ru,tass.ru,lenta.ru&apiKey={self.api_key}"
+            
+            response = requests.get(search_url, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get('status') != 'ok':
+                logger.error(f"News API error: {data.get('message', 'Unknown error')}")
+                return None
+            
+            # Format as search results
+            formatted_data = self._format_news_data(data, "search", user_timezone)
+            formatted_data['category'] = "search"
+            formatted_data['category_name'] = f"Поиск: {query}"
+            formatted_data['category_emoji'] = "🔍"
+            formatted_data['search_query'] = query
+            
+            return formatted_data
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error searching news for query '{query}': {e}")
+            return None
+        except KeyError as e:
+            logger.error(f"Error parsing search news data for query '{query}': {e}")
+            return None
     
     def format_news_details(self, news_data: Dict, article_index: int) -> str:
         """

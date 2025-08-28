@@ -68,18 +68,19 @@ class NewsInterface:
         # Category label (non-active button)
         keyboard.append([InlineKeyboardButton("📰 Категории", callback_data='no_action')])
         
-        # Category buttons with emoji icons only (compact layout)
+        # Category buttons with emoji icons only (compact layout) + search button
         keyboard.append([
             InlineKeyboardButton("🔥", callback_data='news_category_popular'),
             InlineKeyboardButton("⚽", callback_data='news_category_sports'),
             InlineKeyboardButton("💰", callback_data='news_category_economy'),
-            InlineKeyboardButton("🤖", callback_data='news_category_technology')
+            InlineKeyboardButton("🤖", callback_data='news_category_technology'),
+            InlineKeyboardButton("🔍", callback_data='news_search')
         ])
         
-        # Update and Main menu buttons on the same row
+        # Update and Main menu buttons on the same row (Главное меню слева, Обновить справа)
         keyboard.append([
-            InlineKeyboardButton("🔄 Обновить", callback_data='news_category_latest'),
-            InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')
+            InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu'),
+            InlineKeyboardButton("🔄 Обновить", callback_data='news_category_latest')
         ])
         
         return InlineKeyboardMarkup(keyboard)

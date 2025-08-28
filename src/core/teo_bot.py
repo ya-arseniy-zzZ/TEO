@@ -67,6 +67,7 @@ class TeoBot:
     def __init__(self):
         self.application = None
         self.notification_users: Set[int] = set()
+        self.user_states = {}  # Store user states for various operations
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /start command"""
@@ -350,6 +351,10 @@ class TeoBot:
                             [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
                         ])
                     )
+        
+        elif user_state and user_state.get('state') == 'awaiting_news_search':
+            logger.info(f"Processing news search query: {message_text}")
+            await self._process_news_search(update, context, message_text, main_message_id)
         else:
             logger.info(f"No active state found, showing help message")
             # No active state, show help in main message
@@ -1164,6 +1169,10 @@ class TeoBot:
                 await self._show_news_details(query, category, page, article_index)
             else:
                 logger.error(f"Invalid news_details format: {query.data}")
+        
+        elif query.data == 'news_search':
+            # Handle news search
+            await self._handle_news_search(query)
         
         elif query.data == 'no_action':
             # Do nothing for non-active buttons
@@ -2490,6 +2499,28 @@ class TeoBot:
         user_timezone = weather_settings.get('timezone', 'UTC') if weather_settings else 'UTC'
         
         # Get news data with user timezone
+        if category == 'search':
+            # For search results, we need to get the search query from user state
+            # This is a simplified approach - in a real implementation you might want to store search results
+            message = "❌ Детали поиска недоступны. Вернитесь к результатам поиска."
+            keyboard = [
+                [InlineKeyboardButton("🔍 Новый поиск", callback_data='news_search')],
+                [InlineKeyboardButton("📰 К меню новостей", callback_data='news_menu')],
+                [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            try:
+                with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
+                    await query.edit_message_media(
+                        media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
+                        reply_markup=reply_markup
+                    )
+            except Exception as e:
+                logger.error(f"Error sending search details with image: {e}")
+                await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='HTML')
+            return
+        
         news_data = news_service.get_news(category, user_timezone)
         
         if not news_data:
@@ -2550,6 +2581,136 @@ class TeoBot:
             logger.error(f"Error sending news details with image: {e}")
             # Fallback to text-only
             await query.edit_message_text(message, reply_markup=keyboard, parse_mode='HTML')
+    
+    async def _handle_news_search(self, query) -> None:
+        """Handle news search request"""
+        message = """🔍 <b>Поиск новостей</b>
+
+Введите ключевые слова для поиска актуальных новостей.
+
+<i>Примеры:</i>
+• <code>искусственный интеллект</code>
+• <code>футбол</code>
+• <code>экономика</code>
+• <code>технологии</code>
+
+Отправьте сообщение с поисковым запросом."""
+        
+        keyboard = [
+            [InlineKeyboardButton("🔙 К меню новостей", callback_data='news_menu')],
+            [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Send with news avatar image
+        try:
+            with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
+                await query.edit_message_media(
+                    media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
+                    reply_markup=reply_markup
+                )
+        except Exception as e:
+            logger.error(f"Error sending news search with image: {e}")
+            # Fallback to text-only
+            await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='HTML')
+        
+        # Set user state to await search query
+        user_id = query.from_user.id
+        self.user_states[user_id] = {'state': 'awaiting_news_search'}
+    
+    async def _process_news_search(self, update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, main_message_id: int = None) -> None:
+        """Process news search query"""
+        user_id = update.effective_user.id
+        
+        # Clear user state
+        if user_id in self.user_states:
+            del self.user_states[user_id]
+        
+        # Get user timezone
+        weather_settings = db.get_weather_settings(user_id)
+        user_timezone = weather_settings.get('timezone', 'UTC') if weather_settings else 'UTC'
+        
+        # Search for news
+        search_results = news_service.search_news(query, user_timezone)
+        
+        if not search_results or not search_results.get('articles'):
+            message = f"🔍 <b>Поиск: {query}</b>\n\n❌ Новости по вашему запросу не найдены.\n\nПопробуйте другие ключевые слова."
+            keyboard = [
+                [InlineKeyboardButton("🔍 Новый поиск", callback_data='news_search')],
+                [InlineKeyboardButton("📰 К меню новостей", callback_data='news_menu')],
+                [InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+        else:
+            # Format search results
+            articles = search_results['articles']
+            message = f"🔍 <b>Поиск: {query}</b>\n\n"
+            
+            # Show first 3 articles
+            for i, article in enumerate(articles[:3], 1):
+                title = article.get('title', '')
+                time = article.get('time', '')
+                if title:
+                    message += f"<blockquote>{i}. {title} • {time}</blockquote>\n"
+                    if i < min(3, len(articles)):
+                        message += "───────────────\n"
+            
+            message += "\n💡 <i>Подробнее:</i>"
+            
+            # Create navigation keyboard for search results
+            keyboard = []
+            
+            # Numbered buttons for articles
+            article_buttons = []
+            for i in range(min(3, len(articles))):
+                article_buttons.append(InlineKeyboardButton(str(i + 1), callback_data=f'news_details_search_0_{i + 1}'))
+            
+            keyboard.append(article_buttons)
+            
+            # Action buttons
+            keyboard.append([
+                InlineKeyboardButton("🔍 Новый поиск", callback_data='news_search'),
+                InlineKeyboardButton("📰 К меню новостей", callback_data='news_menu')
+            ])
+            
+            keyboard.append([InlineKeyboardButton("🏠 Главное меню", callback_data='main_menu')])
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Send results
+        try:
+            with open('assets/bot_avatar_for_news.jpeg', 'rb') as photo:
+                if main_message_id:
+                    await context.bot.edit_message_media(
+                        chat_id=update.effective_chat.id,
+                        message_id=main_message_id,
+                        media=InputMediaPhoto(media=photo, caption=message, parse_mode='HTML'),
+                        reply_markup=reply_markup
+                    )
+                else:
+                    await update.message.reply_photo(
+                        photo=photo,
+                        caption=message,
+                        reply_markup=reply_markup,
+                        parse_mode='HTML'
+                    )
+        except Exception as e:
+            logger.error(f"Error sending news search results with image: {e}")
+            # Fallback to text-only
+            if main_message_id:
+                await context.bot.edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=main_message_id,
+                    text=message,
+                    reply_markup=reply_markup,
+                    parse_mode='HTML'
+                )
+            else:
+                await update.message.reply_text(
+                    message,
+                    reply_markup=reply_markup,
+                    parse_mode='HTML'
+                )
     
     async def _handle_toggle_daily_notifications(self, query, user_id: int) -> None:
         """Handle toggle daily notifications"""
